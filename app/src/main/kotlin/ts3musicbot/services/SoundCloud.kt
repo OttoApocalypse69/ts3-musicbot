@@ -79,9 +79,9 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
             sendHttpRequest(Link(line.substringAfter('"').substringBefore('"')))
                 .data.data
                 .let { data ->
-                    if (data.contains("client_id=[0-9A-z-_]+\"".toRegex())) {
-                        val idLine = data.lines().first { it.contains("client_id=[0-9A-z-_]+\"".toRegex()) }
-                        val id = idLine.replace("^.*client_id=".toRegex(), "").replace("(&|\"?\\),).*$".toRegex(), "")
+                    if (data.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex())) {
+                        val idLine = data.lines().first { it.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex()) }
+                        val id = idLine.replace("^.*[^_]client_id(=|:\")".toRegex(), "").replace("(&|\"?\\),|\").*$".toRegex(), "")
                         synchronized(clientId) { clientId = id }
                     }
                 }
