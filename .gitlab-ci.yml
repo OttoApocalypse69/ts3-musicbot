@@ -5,7 +5,7 @@ stages:
 
 before_script:
   - apt update
-  - apt install -y kotlin openjdk-11-jdk openjfx zip
+  - apt install -y kotlin openjdk-17-jdk openjfx zip
 
 buildTS3MusicBot:
   stage: build
