@@ -691,7 +691,6 @@ class ChatReader(
                                                                     is SoundCloud -> service.fetchTagOrGenre(link).getTrackList()
                                                                     else -> TrackList()
                                                                 }
-                                                            else -> TrackList()
                                                         }.trackList
                                                             .let { list ->
                                                                 if (trackLimit != 0 && list.size > trackLimit) {

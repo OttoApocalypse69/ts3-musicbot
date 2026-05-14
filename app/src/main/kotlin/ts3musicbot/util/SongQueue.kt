@@ -551,8 +551,13 @@ class SongQueue(
                     // sometimes the spotify player has problems starting, so ensure it actually starts.
                     println()
                     var attempts = 0
+                    val player = getPlayer()
+                    var max_attempts = when (player) {
+                        "spotify", "mpv" -> 20
+                        else -> 300
+                    }
                     while (!processRunning()) {
-                        if (attempts < 20) {
+                        if (attempts < max_attempts) {
                             print("\rWaiting for ${getPlayer()} to start${".".repeat(attempts / 2)}")
                             delay(1000)
                             attempts++
@@ -840,7 +845,6 @@ class SongQueue(
                                     volume = botSettings.bcVolume
                                     service = bandcamp
                                 }
-                                else -> volume = 100
                             }
 
                             val mpvRunnable =
