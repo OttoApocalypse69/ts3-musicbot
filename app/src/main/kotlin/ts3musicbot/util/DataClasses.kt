@@ -33,12 +33,19 @@ enum class LinkType {
     OTHER,
 }
 
+// TODO: Make ordering of parameters consistent accross data classes.
+// For example always have name first, and link last or name first and link second or something,
+// so that there wouldn't be a need to look up the class definition each time you want to create an object...
 open class Playable(
     open val name: Name = Name(),
     open val releaseDate: ReleaseDate = ReleaseDate(),
     open var description: Description = Description(),
     open var link: Link = Link(),
-)
+) {
+    open fun isNotEmpty(): Boolean {
+        return name.isNotEmpty() || description.isNotEmpty() || link.isNotEmpty()
+    }
+}
 
 data class Track(
     val album: Album = Album(),
@@ -73,7 +80,7 @@ data class Track(
 
     fun isEmpty() = album.isEmpty() && artists.isEmpty() && title.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = album.isNotEmpty() || artists.isNotEmpty() || title.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = album.isNotEmpty() || artists.isNotEmpty() || title.isNotEmpty() || link.isNotEmpty()
 }
 
 data class Episode(
@@ -107,7 +114,7 @@ data class Episode(
 
     fun isEmpty() = name.isEmpty() && description.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || description.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || description.isNotEmpty() || link.isNotEmpty()
 }
 
 data class SearchType(
@@ -163,6 +170,9 @@ data class SearchResult(
                 "$searchResult"
             }
         }
+    }
+    fun isNotEmpty(): Boolean {
+       return result.isNotEmpty() || link.isNotEmpty()
     }
 }
 
@@ -673,7 +683,7 @@ data class Album(
 
     fun isEmpty() = name.isEmpty() && artists.isEmpty() && tracks.isEmpty() && link.isEmpty() && genres.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || artists.isNotEmpty() || tracks.isNotEmpty() || link.isNotEmpty() || genres.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || artists.isNotEmpty() || tracks.isNotEmpty() || link.isNotEmpty() || genres.isNotEmpty()
 }
 
 data class User(
@@ -717,7 +727,7 @@ data class User(
 
     fun isEmpty() = name.isEmpty() && userName.isEmpty() && followers.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || userName.isNotEmpty() || followers.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || userName.isNotEmpty() || followers.isNotEmpty() || link.isNotEmpty()
 }
 
 data class Playlist(
@@ -752,7 +762,7 @@ data class Playlist(
 
     fun isEmpty() = name.isEmpty() && owner.isEmpty() && description.isEmpty() && followers.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || owner.isNotEmpty() || description.isNotEmpty() || followers.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || owner.isNotEmpty() || description.isNotEmpty() || followers.isNotEmpty() || link.isNotEmpty()
 }
 
 data class Playlists(
@@ -815,7 +825,7 @@ data class Show(
 
     fun isEmpty() = name.isEmpty() && publisher.isEmpty() && description.isEmpty() && episodes.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || publisher.isNotEmpty() || description.isNotEmpty() || episodes.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || publisher.isNotEmpty() || description.isNotEmpty() || episodes.isNotEmpty() || link.isNotEmpty()
 }
 
 data class Discover(
@@ -840,7 +850,7 @@ data class Discover(
 
     fun isEmpty() = name.isEmpty() && albums.isEmpty() && playlists.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || albums.isNotEmpty() || playlists.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || albums.isNotEmpty() || playlists.isNotEmpty() || link.isNotEmpty()
 }
 
 data class Discoveries(
@@ -878,5 +888,5 @@ data class TagOrGenre(
 
     fun isEmpty() = name.isEmpty() && tracks.isEmpty() && playlists.isEmpty() && link.isEmpty()
 
-    fun isNotEmpty() = name.isNotEmpty() || tracks.isNotEmpty() || playlists.isNotEmpty() || link.isNotEmpty()
+    override fun isNotEmpty() = name.isNotEmpty() || tracks.isNotEmpty() || playlists.isNotEmpty() || link.isNotEmpty()
 }
