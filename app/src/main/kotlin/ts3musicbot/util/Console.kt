@@ -58,7 +58,7 @@ class Console(
                 }
 
                 "restart" ->
-                    when (userCommand.replace("$command\\s+".toRegex(), "").replace("\\s+.*$", "").lowercase()) {
+                    when (val target = userCommand.replace("$command\\s+".toRegex(), "").replace("\\s+.*$", "").lowercase()) {
                         "ts", "teamspeak" ->
                             CoroutineScope(IO).launch {
                                 when (client) {
@@ -67,22 +67,22 @@ class Console(
                                 }
                             }
 
-                        "ncspot" ->
+                        "ncspot", "spotify_player"->
                             CoroutineScope(IO).launch {
-                                playerctl("ncspot", "stop")
+                                playerctl(target, "stop")
                                 commandRunner.runCommand(
-                                    "tmux kill-session -t ncspot",
+                                    "tmux kill-session -t $target",
                                     ignoreOutput = true,
                                 )
                                 delay(100)
                                 commandRunner.runCommand(
-                                    "tmux new -s ncspot -n player -d; tmux send-keys -t ncspot \"ncspot\" Enter",
+                                    "tmux new -s $target -n player -d; tmux send-keys -t $target '$target'; sleep 1; tmux send-keys -t $target 'Enter'",
                                     ignoreOutput = true,
                                     printCommand = true,
                                 )
                             }
 
-                        else -> println("Specify either ts,teamspeak or ncspot!")
+                        else -> println("You must specify ts, teamspeak, ncspot or spotify_player!")
                     }
 
                 "playerctl" -> {
@@ -136,10 +136,14 @@ class Console(
             }
         }
 
+        // TODO: clean up the following code and use BotSettings.spotifyPlayer instead of hardcoding values
+        // val spotifyPlayer = BotSettings.spotifyPlayer
         playerctl("ncspot", "stop")
+        playerctl("spotify_player", "stop")
         playerctl("spotifyd", "stop")
         commandRunner.runCommand("pkill mpv", ignoreOutput = true)
         commandRunner.runCommand("pkill ncspot", ignoreOutput = true)
+        commandRunner.runCommand("pkill spotify_player", ignoreOutput = true)
         commandRunner.runCommand("pkill -9 spotify", ignoreOutput = true)
         commandRunner.runCommand("tmux kill-session -t ncspot", ignoreOutput = true)
         commandRunner.runCommand("pkill -9 ts3client_linux", ignoreOutput = true)

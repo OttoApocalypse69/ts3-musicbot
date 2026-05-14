@@ -167,6 +167,11 @@ class ChatReader(
                                 commandRunner.runCommand("tmux kill-session -t ncspot", ignoreOutput = true)
                             }
 
+                            "spotify_player" -> {
+                                playerctl(botSettings.spotifyPlayer, "stop")
+                                commandRunner.runCommand("tmux kill-session -t spotify_player", ignoreOutput = true)
+                            }
+
                             "spotifyd" -> commandRunner.runCommand("echo \"spotifyd isn't well supported yet, please kill it manually.\"")
                             else ->
                                 commandRunner.runCommand(
@@ -175,7 +180,7 @@ class ChatReader(
                         }
 
                     fun startCommand() =
-                        when (botSettings.spotifyPlayer) {
+                        when (val player = botSettings.spotifyPlayer) {
                             "spotify" ->
                                 commandRunner.runCommand(
                                     "xvfb-run -a spotify --no-zygote --disable-gpu" +
@@ -189,9 +194,9 @@ class ChatReader(
                                     inheritIO = true,
                                 )
 
-                            "ncspot" ->
+                            "ncspot", "spotify_player" ->
                                 commandRunner.runCommand(
-                                    "tmux new -s ncspot -n player -d; tmux send-keys -t ncspot \"ncspot\" Enter",
+                                    "tmux new -s $player -n player -d; tmux send-keys -t $player '$player'; sleep 1; tmux send-keys -t $player 'Enter'",
                                     ignoreOutput = true,
                                     printCommand = true,
                                 )
@@ -2197,7 +2202,7 @@ class ChatReader(
                             // Stop spotify playback
                             commandString.contains("^${cmdList.commandList["sp-stop"]}$".toRegex()) -> {
                                 when (val player = botSettings.spotifyPlayer) {
-                                    "ncspot" -> {
+                                    "ncspot", "spotify_player" -> {
                                         playerctl(player, "stop")
                                         commandRunner.runCommand("tmux kill-session -t $player")
                                     }
@@ -2619,7 +2624,7 @@ class ChatReader(
         track: Track,
     ) {
         when (player) {
-            "spotify", "ncspot", "spotifyd", "mpv" -> {
+            "spotify", "ncspot", "spotify_player", "spotifyd", "mpv" -> {
                 latestMsgUsername = "__song_queue__"
                 parseLine("${cmdList.commandList["queue-nowplaying"]}")
                 println("Now playing:\n$track")

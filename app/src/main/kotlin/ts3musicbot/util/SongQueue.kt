@@ -483,9 +483,13 @@ class SongQueue(
                         commandRunner.runCommand("pkill -9 ncspot")
                         commandRunner.runCommand("tmux kill-session -t ncspot", ignoreOutput = true)
                     }
-
+                    "spotify_player" -> {
+                        playerctl(player, "stop")
+                        commandRunner.runCommand("pkill -9 spotify_player")
+                        commandRunner.runCommand("tmux kill-session -t spotify_player", ignoreOutput = true)
+                    }
                     "spotifyd" -> commandRunner.runCommand("echo \"$player isn't well supported yet, please kill it manually.\"")
-                    else -> commandRunner.runCommand("echo \"$player is not a supported player!\" > /dev/stderr; return 2")
+                    else -> commandRunner.runCommand("echo \"$player is not a supported player, please kill it manually!\" > /dev/stderr; return 2")
                 }
             }
         }
@@ -515,7 +519,7 @@ class SongQueue(
 
             suspend fun startSpotifyPlayer(shouldSetPrefs: Boolean = true) {
                 fun startCommand() =
-                    when (botSettings.spotifyPlayer) {
+                    when (val player = botSettings.spotifyPlayer) {
                         "spotify" ->
                             commandRunner.runCommand(
                                 "xvfb-run -a spotify --no-zygote --disable-gpu" +
@@ -529,9 +533,9 @@ class SongQueue(
                                 inheritIO = true,
                             )
 
-                        "ncspot" ->
+                        "ncspot", "spotify_player" ->
                             commandRunner.runCommand(
-                                "tmux new -s ncspot -n player -d; tmux send-keys -t ncspot \"ncspot\" Enter",
+                                "tmux new -s $player -n player -d; tmux send-keys -t $player '$player'; sleep 1; tmux send-keys -t $player 'Enter'",
                                 ignoreOutput = true,
                                 printCommand = true,
                             )
@@ -1076,7 +1080,7 @@ class SongQueue(
                     // Although this shouldn't be needed, at least in the case of the official spotify client,
                     // sometimes it won't respect the disabled autoplay setting, and will continue playing something else
                     // after the desired track has finished.
-                    if (botSettings.spotifyPlayer != "ncspot") {
+                    if (botSettings.spotifyPlayer == "spotify") {
                         killPlayer(botSettings.spotifyPlayer)
                     }
                     CoroutineScope(IO + synchronized(trackJob) { trackJob }).launch {
