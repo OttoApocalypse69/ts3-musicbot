@@ -1721,7 +1721,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         resolveJob.complete()
                     } else {
                         if ("$linkToSolve".contains("^(https?://)?on\\.soundcloud\\.com/\\S+$".toRegex())) {
-                            linkToSolve = sendHttpRequest(linkToSolve, followRedirects = false).link.clean(this@SoundCloud)
+                            linkToSolve = sendHttpRequest(linkToSolve, followRedirects = true).link.clean(this@SoundCloud)
                         }
                         while (true) {
                             val idData = fetchResolvedData(linkToSolve)
