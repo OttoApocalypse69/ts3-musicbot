@@ -209,6 +209,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             commandRunner.runCommand(
                 ignoreOutput = true,
                 command =
+                    "tmux new -s ts3 -n ts3client -d; tmux send-keys -t ts3 '" +
                     "xvfb-run -a teamspeak3 -nosingleinstance" +
                         " \"" +
                         (if (botSettings.serverAddress.isNotEmpty()) "ts3server://${botSettings.serverAddress}" else "") +
@@ -232,7 +233,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
                                 ""
                             }
                         ) +
-                        "\" &",
+                        "\"" + "'; sleep 1; tmux send-keys -t ts3 'Enter'",
                 inheritIO = false,
             )
             delay(1000)
@@ -486,14 +487,10 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
      */
     private suspend fun killTeamSpeak() {
         repeat(4) {
-            commandRunner.runCommand(
-                "pkill -9 ts3client_linux",
-                ignoreOutput = true,
-                printCommand = false,
-                printOutput = false,
-            )
+            commandRunner.runCommand("pkill -9 ts3client_linux", ignoreOutput = true)
             delay(200)
         }
+        commandRunner.runCommand("tmux kill-session -t ts3", ignoreOutput = true)
     }
 
     /**
