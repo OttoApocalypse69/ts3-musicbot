@@ -38,6 +38,8 @@ import ts3musicbot.util.SongQueue
 import ts3musicbot.util.Track
 import ts3musicbot.util.TrackList
 import ts3musicbot.util.playerctl
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class ChatReader(
     private val client: Client,
@@ -127,7 +129,7 @@ class ChatReader(
                                 currentLine = last
                                 chatUpdated(currentLine)
                             }
-                            delay(500)
+                            delay(500.milliseconds)
                         }
                     }
                     true
@@ -219,12 +221,12 @@ class ChatReader(
                     }
                     // sometimes the spotify player has problems starting, so ensure it actually starts.
                     while (checkProcess().outputText.isEmpty()) {
-                        delay(7000)
+                        delay(7.seconds)
                         if (checkProcess().outputText.isEmpty()) {
                             repeat(2) { killCommand() }
-                            delay(500)
+                            delay(500.milliseconds)
                             startCommand()
-                            delay(2000)
+                            delay(2.seconds)
                         }
                     }
                     // wait for the spotify player to start.
@@ -237,9 +239,9 @@ class ChatReader(
                     ) {
                         // do nothing
                         println("Waiting for ${botSettings.spotifyPlayer} to start")
-                        delay(10)
+                        delay(10.milliseconds)
                     }
-                    delay(5000)
+                    delay(5.seconds)
                 }
 
                 /**
@@ -2185,7 +2187,7 @@ class ChatReader(
                             // sp-pause command
                             commandString.contains("^${cmdList.commandList["sp-pause"]}$".toRegex()) -> {
                                 playerctl(botSettings.spotifyPlayer, "pause")
-                                delay(1000)
+                                delay(1.seconds)
                                 commandJob.complete()
                                 return Pair(true, null)
                             }
@@ -2194,7 +2196,7 @@ class ChatReader(
                                 "^(${cmdList.commandList["sp-resume"]}|${cmdList.commandList["sp-play"]})$".toRegex(),
                             ) -> {
                                 playerctl(botSettings.spotifyPlayer, "play")
-                                delay(1000)
+                                delay(1.seconds)
                                 commandJob.complete()
                                 return Pair(true, null)
                             }
@@ -2223,14 +2225,14 @@ class ChatReader(
                                 "^(${cmdList.commandList["sp-skip"]}|${cmdList.commandList["sp-next"]})$".toRegex(),
                             ) -> {
                                 playerctl(botSettings.spotifyPlayer, "next")
-                                delay(1000)
+                                delay(1.seconds)
                                 commandJob.complete()
                                 return Pair(true, null)
                             }
                             // sp-prev command
                             commandString.contains("^${cmdList.commandList["sp-prev"]}$".toRegex()) -> {
                                 playerctl(botSettings.spotifyPlayer, "previous")
-                                delay(100)
+                                delay(100.milliseconds)
                                 playerctl(botSettings.spotifyPlayer, "previous")
                                 commandJob.complete()
                                 return Pair(true, null)
