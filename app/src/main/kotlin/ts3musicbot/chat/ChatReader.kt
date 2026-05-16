@@ -80,7 +80,7 @@ class ChatReader(
             is OfficialTSClient -> {
                 when (client.channelFile.extension) {
                     "txt" -> {
-                        text.replace("\\[/?URL]|,(\$|\\s)".toRegex(), "")
+                        text.replace("\\[/?URL]|,($|\\s)".toRegex(), "")
                     }
 
                     else -> {
@@ -90,7 +90,7 @@ class ChatReader(
                 }
             }
 
-            is TeamSpeak -> text.replace("\\[/?URL]|,(\$|\\s)".toRegex(), "")
+            is TeamSpeak -> text.replace("\\[/?URL]|,($|\\s)".toRegex(), "")
 
             else -> {
                 println("Couldn't remove tags!\n$client is not a supported client!")
@@ -120,7 +120,7 @@ class ChatReader(
             is OfficialTSClient -> {
                 shouldRead = true
                 val channelFile = client.channelFile
-                return if (channelFile.isFile) {
+                 if (channelFile.isFile) {
                     CoroutineScope(IO).launch {
                         var currentLine = ""
                         while (shouldRead) {
@@ -327,7 +327,7 @@ class ChatReader(
                                         "(track|album|playlist|show|episode|artist):\\S+)|(https?://\\S+)|" +
                                         "((sp|spotify|yt|youtube|sc|soundcloud|bc|bandcamp)\\s+" +
                                         "(track|album|playlist|show|episode|artist|video|user)\\s+.+))(\\[/URL])?" +
-                                        "\\s*,?\\s*)+(\\s+-\\w*(r|s|t|P|([lp]\\s*[0-9]+)))*\$"
+                                        "\\s*,?\\s*)+(\\s+-\\w*(r|s|t|P|([lp]\\s*[0-9]+)))*$"
                                 ).toRegex(),
                             ) -> {
                                 val trackAddedMsg = "Added track to queue."
