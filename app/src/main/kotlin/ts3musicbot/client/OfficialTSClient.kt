@@ -14,6 +14,8 @@ import kotlin.properties.Delegates
 import kotlin.system.exitProcess
 import java.text.Normalizer
 import java.text.Normalizer.Form
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
     val tsClientDirPath = "${System.getProperty("user.home")}/.ts3client"
@@ -147,7 +149,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             if (channelName != currentChannelName) {
                 if (channelPassword.isNotEmpty()) {
                     clientQuery("disconnect")
-                    delay(500)
+                    delay(500.milliseconds)
                     clientQuery(
                         "connect address=${botSettings.serverAddress} password=${encode(botSettings.serverPassword)} " +
                             "nickname=${encode(botSettings.nickname)} " +
@@ -238,7 +240,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
                         "\"" + "'; sleep 1; tmux send-keys -t ts3 'Enter'",
                 inheritIO = false,
             )
-            delay(1000)
+            delay(1.seconds)
             // wait for teamspeak to start
             println()
             var dotsAmount = 0
@@ -246,7 +248,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
                     .outputText.contains("ts3client_linux".toRegex())
             ) {
                 print("\rWaiting for TeamSpeak's process to start" + ".".repeat(dotsAmount) + "    ")
-                delay(1000)
+                delay(1.seconds)
                 if (dotsAmount < 3) {
                     dotsAmount++
                 } else {
@@ -257,7 +259,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             dotsAmount = 0
             while (getVirtualServerName().isEmpty()) {
                 print("\rWaiting for TeamSpeak to connect to server" + ".".repeat(dotsAmount) + "    ")
-                delay(1000)
+                delay(1.seconds)
                 if (dotsAmount < 3) {
                     dotsAmount++
                 } else {
@@ -268,7 +270,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             serverName = getVirtualServerName()
             println("Server name: $serverName")
             audioSetup()
-            delay(1000)
+            delay(1.seconds)
             return true
         } else {
             return false
@@ -282,7 +284,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
         suspend fun generateFile() {
             println("Trying to generate file.")
             killTeamSpeak()
-            delay(500)
+            delay(500.milliseconds)
             val logFile = File("/tmp/tsOutput.log")
             if (!logFile.exists()) {
                 withContext(IO) {
@@ -303,7 +305,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             var dotsAmount = 0
             while (!logFile.readLines().any { it.contains("Addon installed: ClientQuery") }) {
                 print("\rWaiting for TeamSpeak to install ClientQuery addon" + ".".repeat(dotsAmount) + "    ")
-                delay(1000)
+                delay(1.seconds)
                 if (dotsAmount < 3) {
                     dotsAmount++
                 } else {
@@ -312,7 +314,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             }
             println("\nDone.")
             logFile.delete()
-            delay(2000)
+            delay(2.seconds)
             killTeamSpeak()
         }
 
@@ -480,7 +482,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
      */
     suspend fun stopTeamSpeak() {
         clientQuery("disconnect")
-        delay(500)
+        delay(500.milliseconds)
         killTeamSpeak()
     }
 
@@ -490,7 +492,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
     private suspend fun killTeamSpeak() {
         repeat(4) {
             commandRunner.runCommand("pkill -9 ts3client_linux", ignoreOutput = true)
-            delay(200)
+            delay(200.milliseconds)
         }
         commandRunner.runCommand("tmux kill-session -t ts3", ignoreOutput = true)
     }
