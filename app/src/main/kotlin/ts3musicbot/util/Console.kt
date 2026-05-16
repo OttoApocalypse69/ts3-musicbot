@@ -8,6 +8,8 @@ import ts3musicbot.client.Client
 import ts3musicbot.client.OfficialTSClient
 import ts3musicbot.client.TeamSpeak
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class Console(
     private val commandList: CommandList,
@@ -16,7 +18,7 @@ class Console(
 ) {
     private val commandRunner = CommandRunner()
 
-    fun startConsole() {
+    suspend fun startConsole() {
         // start console
         val console = System.console()
         println("Enter command \"help\" for all commands.")
@@ -74,7 +76,7 @@ class Console(
                                     "tmux kill-session -t $target",
                                     ignoreOutput = true,
                                 )
-                                delay(100)
+                                delay(100.milliseconds)
                                 commandRunner.runCommand(
                                     "tmux new -s $target -n player -d; tmux send-keys -t $target '$target'; sleep 1; tmux send-keys -t $target 'Enter'",
                                     ignoreOutput = true,
@@ -117,20 +119,18 @@ class Console(
         }
     }
 
-    private fun exit(command: String) {
+    private suspend fun exit(command: String) {
         val console = System.console()
         var confirmed = false
         while (!confirmed) {
             val exitTeamSpeak = console.readLine("Close TeamSpeak? [Y/n]: ").lowercase()
             if (exitTeamSpeak.contentEquals("y") || exitTeamSpeak.contentEquals("yes") || exitTeamSpeak.contentEquals("")) {
                 confirmed = true
-                CoroutineScope(IO).launch {
-                    when (client) {
-                        is TeamSpeak -> launch { client.disconnect() }
-                        is OfficialTSClient -> launch { client.stopTeamSpeak() }
-                    }
-                    delay(1000)
+                when (client) {
+                    is TeamSpeak -> client.disconnect()
+                    is OfficialTSClient -> client.stopTeamSpeak()
                 }
+                delay(1.seconds)
             } else if (exitTeamSpeak.contentEquals("n") || exitTeamSpeak.contentEquals("no")) {
                 break
             }

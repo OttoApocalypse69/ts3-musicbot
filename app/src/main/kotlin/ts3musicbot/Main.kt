@@ -399,7 +399,9 @@ class Main :
                                         },
                                         officialTSClient,
                                     )
-                                console.startConsole()
+                                CoroutineScope(IO).launch {
+                                    console.startConsole()
+                                }
                             } else {
                                 print("Error: Bot wasn't able start reading the chat!")
                             }
@@ -445,7 +447,9 @@ class Main :
                                     },
                                     teamSpeak,
                                 )
-                            console.startConsole()
+                            CoroutineScope(IO).launch {
+                                console.startConsole()
+                            }
                         } else {
                             print("Error: Bot wasn't able to start reading the chat!")
                         }
