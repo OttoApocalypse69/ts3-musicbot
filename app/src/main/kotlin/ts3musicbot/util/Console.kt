@@ -146,7 +146,7 @@ class Console(
         commandRunner.runCommand("pkill spotify_player", ignoreOutput = true)
         commandRunner.runCommand("pkill -9 spotify", ignoreOutput = true)
         commandRunner.runCommand("tmux kill-session -t ncspot", ignoreOutput = true)
-        commandRunner.runCommand("pkill -9 ts3client_linux", ignoreOutput = true)
+        commandRunner.runCommand("tmux kill-session -t spotify_player", ignoreOutput = true)
         consoleUpdateListener.onCommandIssued(command)
         exitProcess(0)
     }
