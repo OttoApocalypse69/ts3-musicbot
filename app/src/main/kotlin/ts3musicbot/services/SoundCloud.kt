@@ -178,7 +178,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                     ) {
                                         playlistData.getInt("likes_count").toLong()
                                     } else {
-                                        Followers().amount.toLong()
+                                        Followers().amount
                                     },
                                 ),
                                 Publicity(playlistData.getString("sharing") == "public"),
@@ -1190,8 +1190,8 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         tracksAmount: Int = 0,
     ): TrackList {
         val userId = Link("$link".substringBefore("/tracks")).getId(this)
-        // get a max of 500 tracks by default in case we can't get a number from the json
-        var amount = 500
+        // get a max of 250 tracks by default in case we can't get a number from the json
+        var amount = 250
 
         fun getTrackAmount(data: Response) = JSONObject(data.data.data).getInt("track_count")
         val userJob = Job()
@@ -1229,12 +1229,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
      */
     private suspend fun fetchUserTracks(
         userId: String,
-        tracksAmount: Int,
+        tracksAmount: Int, // TODO: if over 250, fetch tracks in 250 item chunks until tracksAmount is reached
     ): TrackList {
         fun fetchTracksData(): Response {
             val linkBuilder = StringBuilder()
             linkBuilder.append("$api2URI/users/$userId/tracks")
-            linkBuilder.append("?limit=$tracksAmount")
+            linkBuilder.append("?limit=${if (tracksAmount > 250) 250 else tracksAmount}")
             linkBuilder.append("&client_id=$clientId")
             return sendHttpRequest(Link(linkBuilder.toString()))
         }
