@@ -697,7 +697,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
     private fun runPactlCommand(command: String): JSONArray {
         /**
          * Converts a pactl output string to a JSONArray.
-         * This is required because pactl has a built-in json formatter only from version 16.0 onwards.
+         * This is required because pactl has a built-in JSON formatter only from version 16.0 onwards.
          * @param stringToConvert The string you want to convert
          * @return Returns a JSONArray which was parsed from stringToConvert
          */
