@@ -16,7 +16,7 @@ class TeamSpeak(botSettings: BotSettings) : Client(botSettings), TS3Listener {
 
     init {
         clientSocket.addListener(this)
-        clientSocket.setIdentity(getIdentity())
+        clientSocket.identity = getIdentity()
         clientSocket.nickname = botSettings.nickname
     }
 
