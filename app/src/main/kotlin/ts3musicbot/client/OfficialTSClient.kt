@@ -12,6 +12,8 @@ import java.io.FileOutputStream
 import java.net.URLEncoder
 import kotlin.properties.Delegates
 import kotlin.system.exitProcess
+import java.text.Normalizer
+import java.text.Normalizer.Form
 
 class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
     val tsClientDirPath = "${System.getProperty("user.home")}/.ts3client"
@@ -555,6 +557,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
      * @param message The message to send
      */
     override fun sendMsgToChannel(message: String) {
+        val normalizedMessage = Normalizer.normalize(message, Form.NFKD)
         // TeamSpeak's character limit is 8192 per message
         val tsCharLimit = 8192
 
@@ -641,7 +644,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
             )
         }
 
-        var msg = message
+        var msg = normalizedMessage
         while (true) {
             // add an empty line to the start of the message if there isn't one already.
             if (msg.lines().size > 1 && !msg.startsWith("\n")) {
