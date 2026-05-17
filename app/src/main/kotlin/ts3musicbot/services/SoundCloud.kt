@@ -5,8 +5,8 @@ import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -48,7 +48,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
-    var clientId = "H8sYVN4CJ2E8Ij83bJZ1OtB9w4kzyyvy"
+    var clientId = "gxPRNsEq7CDD7Wvem4iymWOq3YfU7KS8"
     private val api2URI = URI("https://api-v2.soundcloud.com")
     val apiURI = URI("https://api.soundcloud.com")
 
@@ -310,20 +310,19 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
             resultsData.add(searchData(search.first, search.second))
         }
         for (result in resultsData) {
-            val searchJob = Job()
-            withContext(IO + searchJob) {
+            withContext(IO) {
                 var searchData = result
                 while (true) {
                     when (searchData.code.code) {
                         HttpURLConnection.HTTP_OK -> {
                             try {
                                 val resultData = JSONObject(searchData.data.data)
-                                withContext(Default + searchJob) {
+                                withContext(Default) {
                                     parseResults(resultData)
                                 }
-                                searchJob.complete()
                                 return@withContext
                             } catch (e: JSONException) {
+                                e.printStackTrace()
                                 // JSON broken, try getting the data again
                                 println("Failed JSON:\n${searchData.data}\n")
                                 println("Failed to get data from JSON, trying again...")
@@ -414,7 +413,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                 } else {
                     val tracks = playlistData.getJSONArray("tracks")
                     if (!tracks.isEmpty) {
-                        tracks.map {
+                        tracks.forEach {
                             it as JSONObject
                             parseTrackData(it)
                         }
@@ -435,8 +434,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
     ): Playlist {
         lateinit var playlist: Playlist
         val isSystemPlaylist = playlistLink.linkType(this) == LinkType.SYSTEM_PLAYLIST
-        val playlistJob = Job()
-        withContext(IO + playlistJob) {
+        withContext(IO) {
             while (true) {
                 val playlistData = fetchPlaylistData(playlistLink)
                 when (playlistData.code.code) {
@@ -444,12 +442,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             val playlistJSON = JSONObject(playlistData.data.data)
                             playlist = parsePlaylistData(playlistJSON, isSystemPlaylist, shouldFetchTracks)
-                            playlistJob.complete()
                             return@withContext
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${playlistData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -475,8 +473,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         limit: Int,
     ): TrackList {
         val trackList = ArrayList<Track>()
-        val playlistJob = Job()
-        withContext(IO + playlistJob) {
+        withContext(IO) {
             while (true) {
                 val playlistData = fetchPlaylistData(playlistLink)
                 when (playlistData.code.code) {
@@ -507,12 +504,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                     newList
                                 }
                             trackList.addAll(sortedList.await())
-                            playlistJob.complete()
                             return@withContext
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${playlistData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -543,7 +540,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         return sendHttpRequest(Link(linkBuilder.toString()))
     }
 
-    private suspend fun parseAlbumData(
+    private fun parseAlbumData(
         albumJSON: JSONObject,
         shouldFetchTracks: Boolean = true,
     ): Album {
@@ -623,7 +620,11 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                     it.has("title")
                                 }
                             ) {
-                                fetchAlbumTracks(Link(albumJSON.getString("permalink_url")))
+                                var tracks = TrackList()
+                                CoroutineScope(IO).launch {
+                                    tracks = fetchAlbumTracks(Link(albumJSON.getString("permalink_url")))
+                                }
+                                tracks
                             } else {
                                 TrackList(
                                     albumJSON.getJSONArray("tracks").map {
@@ -650,8 +651,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
 
     override suspend fun fetchAlbum(albumLink: Link): Album {
         val id = resolveId(albumLink)
-        val albumJob = Job()
-        return withContext(IO + albumJob) {
+        return withContext(IO) {
             lateinit var album: Album
             while (true) {
                 val albumData = fetchAlbumData(id)
@@ -662,9 +662,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                             album = parseAlbumData(albumJSON)
                             break
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${albumData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -675,7 +676,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                     else -> println("HTTP ERROR! CODE ${albumData.code}")
                 }
             }
-            albumJob.complete()
             album
         }
     }
@@ -685,8 +685,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         limit: Int,
     ): TrackList {
         val id = resolveId(albumLink)
-        val albumJob = Job()
-        return withContext(IO + albumJob) {
+        return withContext(IO){
             val trackList = ArrayList<Track>()
             while (true) {
                 val albumData = fetchAlbumData(id)
@@ -720,9 +719,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                             trackList.addAll(sortedList.await())
                             break
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${albumData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -737,7 +737,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         }
     }
 
-    private suspend fun parseTrackData(trackData: JSONObject): Track =
+    private fun parseTrackData(trackData: JSONObject): Track =
         Track(
             parseAlbumData(trackData, false),
             Artists(
@@ -786,8 +786,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
             return sendHttpRequest(Link(linkBuilder.toString()))
         }
 
-        val trackJob = Job()
-        withContext(IO + trackJob) {
+        withContext(IO) {
             while (true) {
                 val trackData = fetchTrackData()
                 when (trackData.code.code) {
@@ -795,12 +794,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             val data = JSONObject(trackData.data.data)
                             track = parseTrackData(data)
-                            trackJob.complete()
                             return@withContext
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${trackData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -811,7 +810,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                     HttpURLConnection.HTTP_NOT_FOUND -> {
                         println("Error 404! $trackLink not found!")
                         track = Track()
-                        trackJob.complete()
                         return@withContext
                     }
 
@@ -844,11 +842,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
             return sendHttpRequest(Link(linkBuilder.toString()))
         }
 
-        val tracksJob = Job()
         val tracks =
-            CoroutineScope(IO + tracksJob).async {
+            CoroutineScope(IO).async {
                 val trackList = ArrayList<Track>()
-                withContext(IO + tracksJob) {
+                withContext(IO) {
                     val linksToFetch = ArrayList<List<Link>>()
                     var list = ArrayList<Link>()
                     for (link in links) {
@@ -876,17 +873,16 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                                 trackList.addAll(
                                                     data.map {
                                                         it as JSONObject
-                                                        runBlocking {
-                                                            parseTrackData(it)
-                                                        }
+                                                        parseTrackData(it)
                                                     },
                                                 )
                                             }
                                             return@launch
                                         } catch (e: JSONException) {
+                                            e.printStackTrace()
                                             // JSON broken, try getting the data again
                                             println("Failed JSON:\n${tracksData.data}\n")
-                                            println("Failed to get data from JSON, trying again...")
+                                            this.cancel("Failed to get data from JSON")
                                         }
                                     }
 
@@ -896,7 +892,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
 
                                     HttpURLConnection.HTTP_NOT_FOUND -> {
                                         println("Error 404! $linksToFetch not found!")
-                                        tracksJob.complete()
                                         return@launch
                                     }
 
@@ -927,14 +922,14 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
 
         val playlists = ArrayList<Playlist>()
         val playlistsJob = Job()
-        withContext(IO + playlistsJob) {
+        withContext(IO) {
             while (true) {
                 val playlistsData = fetchData()
                 when (playlistsData.code.code) {
                     HttpURLConnection.HTTP_OK -> {
                         try {
                             val data = JSONObject(playlistsData.data.data)
-                            data.getJSONArray("collection").map {
+                            data.getJSONArray("collection").forEach {
                                 it as JSONObject
                                 val isSystemPlaylist =
                                     Link(
@@ -945,9 +940,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                             playlistsJob.complete()
                             return@withContext
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${playlistsData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -978,8 +974,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         }
 
         val likes = ArrayList<Track>()
-        val likesJob = Job()
-        withContext(IO + likesJob) {
+        withContext(IO) {
             var likesData = fetchData()
             while (true) {
                 when (likesData.code.code) {
@@ -998,7 +993,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                                             likes.add(parseTrackData(track))
                                                         } else {
                                                             println("Limit reached!")
-                                                            likesJob.complete()
                                                             return@withContext
                                                         }
                                                     } else {
@@ -1007,7 +1001,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                                 } catch (e: JSONException) {
                                                     // JSON broken, try getting the data again
                                                     println("Failed JSON:\n${track.toString(4)}\n")
-                                                    println("Failed to get data from JSON:\n${e.printStackTrace()}")
+                                                    this.cancel("Failed to get data from JSON:\n${e.printStackTrace()}")
                                                 }
                                             }
                                         }
@@ -1043,17 +1037,16 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                         likesData = fetchData(Link(data.getString("next_href")))
                                     }
                                 } else {
-                                    likesJob.complete()
                                     return@withContext
                                 }
                             } else {
-                                likesJob.complete()
                                 return@withContext
                             }
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${likesData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1089,8 +1082,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         }
 
         val reposts = ArrayList<Track>()
-        val repostsJob = Job()
-        withContext(IO + repostsJob) {
+        withContext(IO) {
             var repostsData = fetchData()
             while (true) {
                 when (repostsData.code.code) {
@@ -1109,16 +1101,16 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                                             reposts.add(parseTrackData(track))
                                                         } else {
                                                             println("Limit reached!")
-                                                            repostsJob.complete()
                                                             return@withContext
                                                         }
                                                     } else {
                                                         reposts.add(parseTrackData(track))
                                                     }
                                                 } catch (e: JSONException) {
+                                                    e.printStackTrace()
                                                     // JSON broken, try getting the data again
                                                     println("Failed JSON:\n${track.toString(4)}\n")
-                                                    println("Failed to get data from JSON, trying again...")
+                                                    this.cancel("Failed to get data from JSON")
                                                 }
                                             }
                                         }
@@ -1154,17 +1146,16 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                         repostsData = fetchData(Link(data.getString("next_href")))
                                     }
                                 } else {
-                                    repostsJob.complete()
                                     return@withContext
                                 }
                             } else {
-                                repostsJob.complete()
                                 return@withContext
                             }
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${repostsData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1174,7 +1165,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
 
                     HttpURLConnection.HTTP_BAD_GATEWAY -> {
                         println("HTTP ERROR! CODE ${repostsData.code} BAD GATEWAY")
-                        repostsJob.complete()
                         return@withContext
                     }
 
@@ -1194,8 +1184,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         var amount = 250
 
         fun getTrackAmount(data: Response) = JSONObject(data.data.data).getInt("track_count")
-        val userJob = Job()
-        withContext(IO + userJob) {
+        withContext(IO) {
             while (true) {
                 val userData = fetchUserData(userId)
                 when (userData.code.code) {
@@ -1203,9 +1192,9 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             amount = getTrackAmount(userData)
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             println("Failed JSON:\n${userData.data}\n")
                         }
-                        userJob.complete()
                         return@withContext
                     }
 
@@ -1258,9 +1247,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                     tracksJob.complete()
                                     break
                                 } catch (e: JSONException) {
+                                    e.printStackTrace()
                                     // JSON broken, try getting the data again
                                     println("Failed JSON:\n${tracksData.data.data}\n")
-                                    println("Failed to get data from JSON, trying again...")
+                                    this.cancel("Failed to get data from JSON")
                                 }
                             }
 
@@ -1300,8 +1290,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                 Link(userData.getString("permalink_url")),
             )
 
-        val userJob = Job()
-        withContext(IO + userJob) {
+        withContext(IO) {
             while (true) {
                 val userData = fetchUserData(id)
                 when (userData.code.code) {
@@ -1309,12 +1298,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             val data = JSONObject(userData.data.data)
                             user = parseUserData(data)
-                            userJob.complete()
                             return@withContext
                         } catch (e: JSONException) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${userData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1337,7 +1326,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
     ): Artist {
         lateinit var artist: Artist
         val id = resolveId(artistLink)
-        val artistJob = Job()
 
         suspend fun parseArtistData(artistData: JSONObject) {
             fun fetchRelatedArtistsData(): Response {
@@ -1359,9 +1347,8 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         topTracks.add(it)
                     }
                 }
-            val relatedArtistsJob = Job()
             val relatedArtists =
-                withContext(IO + relatedArtistsJob) {
+                withContext(IO) {
                     val artists = ArrayList<Artist>()
                     while (true) {
                         val artistsData = fetchRelatedArtistsData()
@@ -1380,9 +1367,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                     )
                                     break
                                 } catch (e: JSONException) {
+                                    e.printStackTrace()
                                     // JSON broken, try getting the data again
                                     println("Failed JSON:\n${artistsData.data}\n")
-                                    println("Failed to get data from JSON, trying again...")
+                                    this.cancel("Failed to get data from JSON")
                                 }
                             }
 
@@ -1393,7 +1381,6 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                             else -> println("HTTP ERROR! CODE: ${artistsData.code}")
                         }
                     }
-                    relatedArtistsJob.complete()
                     artists
                 }
             artist =
@@ -1414,7 +1401,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                 )
         }
 
-        withContext(IO + artistJob) {
+        withContext(IO) {
             while (true) {
                 val artistData = fetchUserData(id)
                 when (artistData.code.code) {
@@ -1422,12 +1409,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             val data = JSONObject(artistData.data.data)
                             parseArtistData(data)
-                            artistJob.complete()
                             return@withContext
                         } catch (e: Exception) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${artistData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1488,7 +1475,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         }
 
         val discoverJob = Job()
-        withContext(IO + discoverJob) {
+        withContext(IO) {
             while (true) {
                 val discoverData = fetchDiscoverData()
                 when (discoverData.code.code) {
@@ -1499,9 +1486,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                             discoverJob.complete()
                             return@withContext
                         } catch (e: Exception) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${discoverData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1564,8 +1552,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                 }
             }
         }
-        val tagOrGenreJob = Job()
-        withContext(IO + tagOrGenreJob) {
+        withContext(IO) {
             while (true) {
                 val tagOrGenreData = fetchTagOrGenreData()
                 when (tagOrGenreData.code.code) {
@@ -1573,12 +1560,12 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                         try {
                             val data = JSONObject(tagOrGenreData.data.data)
                             parseTagOrGenreData(data)
-                            tagOrGenreJob.complete()
                             return@withContext
                         } catch (e: Exception) {
+                            e.printStackTrace()
                             // JSON broken, try getting the data again
                             println("Failed JSON:\n${tagOrGenreData.data}\n")
-                            println("Failed to get data from JSON, trying again...")
+                            this.cancel("Failed to get data from JSON")
                         }
                     }
 
@@ -1662,9 +1649,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                             }
                                         break
                                     } catch (e: JSONException) {
+                                        e.printStackTrace()
                                         // JSON broken, try getting the data again
                                         println("Failed JSON:\n${typeData.data}\n")
-                                        println("Failed to get data from JSON, trying again...")
+                                        this.cancel("Failed to get data from JSON")
                                     }
                                 }
 
@@ -1736,9 +1724,10 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                         }
                                         break
                                     } catch (e: JSONException) {
+                                        e.printStackTrace()
                                         // JSON broken, try getting the data again
                                         println("Failed JSON:\n${idData.data}\n")
-                                        println("Failed to get data from JSON, trying again...")
+                                        this.cancel("Failed to get data from JSON")
                                     }
                                 }
 

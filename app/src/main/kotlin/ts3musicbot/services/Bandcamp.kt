@@ -1,7 +1,7 @@
 package ts3musicbot.services
 
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -153,8 +153,7 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
     override suspend fun fetchTrack(trackLink: Link): Track {
         val request = sendHttpRequest(trackLink)
         lateinit var track: Track
-        val trackJob = Job()
-        withContext(IO + trackJob) {
+        withContext(IO) {
             while (true) {
                 when (request.code.code) {
                     HttpURLConnection.HTTP_OK -> {
@@ -254,7 +253,6 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
                                     Playability(trackData.has("duration")),
                                 )
                             }
-                        trackJob.complete()
                         return@withContext
                     }
 
@@ -267,7 +265,6 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
                     else -> {
                         println("HTTP ERROR! CODE: ${request.code}")
                         track = Track()
-                        trackJob.complete()
                         return@withContext
                     }
                 }
@@ -568,6 +565,7 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
                         else -> Discoveries()
                     }
                 } catch (e: Exception) {
+                    e.printStackTrace()
                     println("Failed JSON:\n${response.data}\n")
                     Discoveries()
                 }
@@ -693,10 +691,9 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
             }
         }
 
-        val showJob = Job()
         var websiteJSON: JSONObject? = null
         var apiJSON: JSONObject? = null
-        withContext(IO + showJob) {
+        withContext(IO) {
             when (websiteResponse.code.code) {
                 HttpURLConnection.HTTP_OK -> {
                     try {
@@ -711,30 +708,31 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
                     } catch (e: Exception) {
                         println(e)
                         println("Failed JSON:\n${websiteResponse.data}\n")
-                        showJob.cancel()
+                        this.cancel()
                         return@withContext
                     }
                 }
 
                 else -> {
-                    showJob.cancel()
+                    this.cancel()
                     return@withContext
                 }
             }
-            when (apiResponse.code.code) {
+            when (val code = apiResponse.code.code) {
                 HttpURLConnection.HTTP_OK -> {
                     try {
                         apiJSON = JSONObject(apiResponse.data.data)
                     } catch (e: Exception) {
-                        println(e)
-                        println("Failed JSON:\n${apiResponse.data}\n")
-                        showJob.cancel()
+                        e.printStackTrace()
+                        val msg = "Failed JSON:\n${apiResponse.data}\n"
+                        println(msg)
+                        this.cancel(msg)
                         return@withContext
                     }
                 }
 
                 else -> {
-                    showJob.cancel()
+                    this.cancel("Got error code $code")
                     return@withContext
                 }
             }
