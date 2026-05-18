@@ -33,7 +33,7 @@ enum class LinkType {
     OTHER,
 }
 
-// TODO: Make ordering of parameters consistent accross data classes.
+// TODO: Make ordering of parameters consistent across data classes.
 // For example always have name first, and link last or name first and link second or something,
 // so that there wouldn't be a need to look up the class definition each time you want to create an object...
 open class Playable(
@@ -123,7 +123,7 @@ data class SearchType(
     fun getType() =
         try {
             LinkType.valueOf(type.uppercase())
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             LinkType.OTHER
         }
 
@@ -155,9 +155,7 @@ data class SearchResult(
                 val searchResult = result
                 searchResult.description =
                     Description(
-                        if (result.description.shortText.isNotEmpty()) {
-                            result.description.shortText
-                        } else {
+                        result.description.shortText.ifEmpty {
                             if (result.description.text.lines().size <= 5) {
                                 result.description.text
                             } else {
@@ -343,7 +341,7 @@ data class Link(
 
                 ServiceType.SOUNDCLOUD -> {
                     runBlocking {
-                        val soundCloud = if (service is SoundCloud) service else SoundCloud()
+                        val soundCloud =  service as? SoundCloud ?: SoundCloud()
                         if (link.startsWith("${soundCloud.apiURI}/")) {
                             clean(soundCloud).link.substringAfterLast("/")
                         } else {
@@ -357,7 +355,7 @@ data class Link(
                 }
 
                 ServiceType.APPLE_MUSIC -> {
-                    val appleMusic = if (service is AppleMusic) service else AppleMusic(BotSettings())
+                    val appleMusic = service as? AppleMusic ?: AppleMusic(BotSettings())
                     runBlocking {
                         appleMusic.resolveId(this@Link)
                     }
