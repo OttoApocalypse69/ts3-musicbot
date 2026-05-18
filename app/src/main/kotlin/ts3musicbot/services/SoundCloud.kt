@@ -69,22 +69,26 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
      * @return returns the new id
      */
     fun updateClientId(): String {
-        println("Updating SoundCloud ClientId")
-        val lines =
-            sendHttpRequest(Link("https://soundcloud.com"))
-                .data.data
-                .lines()
-                .filter { it.contains("^<script crossorigin src=\"https://\\S+\\.js\"></script>".toRegex()) }
-        for (line in lines) {
-            sendHttpRequest(Link(line.substringAfter('"').substringBefore('"')))
-                .data.data
-                .let { data ->
-                    if (data.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex())) {
-                        val idLine = data.lines().first { it.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex()) }
-                        val id = idLine.replace("^.*[^_]client_id(=|:\")".toRegex(), "").replace("(&|\"?\\),|\").*$".toRegex(), "")
-                        synchronized(clientId) { clientId = id }
-                    }
+        println("Updating SoundCloud client_id")
+        val response = sendHttpRequest(Link("https://soundcloud.com"))
+        when (val code = response.code.code) {
+            HttpURLConnection.HTTP_OK -> {
+                val lines = response.data.data
+                    .lines()
+                    .filter { it.contains("^<script crossorigin src=\"https://\\S+\\.js\"></script>".toRegex()) }
+                for (line in lines) {
+                    sendHttpRequest(Link(line.substringAfter('"').substringBefore('"')))
+                        .data.data
+                        .let { data ->
+                            if (data.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex())) {
+                                val idLine = data.lines().first { it.contains("client_id(=[0-9A-z-_]{5,}|:\"[0-9A-z-_]{5,}\")".toRegex()) }
+                                val id = idLine.replace("^.*[^_]client_id(=|:\")".toRegex(), "").replace("(&|\"?\\),|\").*$".toRegex(), "")
+                                synchronized(clientId) { clientId = id }
+                            }
+                        }
                 }
+            }
+            else -> println("HTTP ERROR $code! Couldn't update the client_id!")
         }
         return clientId
     }
