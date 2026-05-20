@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -544,7 +545,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         return sendHttpRequest(Link(linkBuilder.toString()))
     }
 
-    private fun parseAlbumData(
+    private suspend fun parseAlbumData(
         albumJSON: JSONObject,
         shouldFetchTracks: Boolean = true,
     ): Album {
@@ -625,9 +626,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                 }
                             ) {
                                 var tracks = TrackList()
-                                CoroutineScope(IO).launch {
-                                    tracks = fetchAlbumTracks(Link(albumJSON.getString("permalink_url")))
-                                }
+                                tracks = fetchAlbumTracks(Link(albumJSON.getString("permalink_url")))
                                 tracks
                             } else {
                                 TrackList(
@@ -741,7 +740,7 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
         }
     }
 
-    private fun parseTrackData(trackData: JSONObject): Track =
+    private suspend fun parseTrackData(trackData: JSONObject): Track =
         Track(
             parseAlbumData(trackData, false),
             Artists(
@@ -877,7 +876,9 @@ class SoundCloud : Service(ServiceType.SOUNDCLOUD) {
                                                 trackList.addAll(
                                                     data.map {
                                                         it as JSONObject
-                                                        parseTrackData(it)
+                                                        runBlocking {
+                                                            parseTrackData(it)
+                                                        }
                                                     },
                                                 )
                                             }
