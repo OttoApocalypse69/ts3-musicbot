@@ -88,7 +88,7 @@ class Bandcamp : Service(ServiceType.BANDCAMP) {
                                 "b" -> {
                                     val artistName = item.getString("name")
                                     val artistUrl = item.getString("url")
-                                    val genres = item.getJSONArray("tag_names").map { it as String; it }
+                                    val genres = if (!item.isNull("tag_names")) item.getJSONArray("tag_names").map { it as String; it } else emptyList()
                                     val artist = Artist(
                                         Name(artistName),
                                         Link(artistUrl),
