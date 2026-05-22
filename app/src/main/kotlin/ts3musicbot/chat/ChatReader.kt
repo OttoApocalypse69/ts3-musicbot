@@ -24,6 +24,7 @@ import ts3musicbot.services.SongLink
 import ts3musicbot.services.SoundCloud
 import ts3musicbot.services.Spotify
 import ts3musicbot.services.YouTube
+import ts3musicbot.services.Lyrics
 import ts3musicbot.util.BotSettings
 import ts3musicbot.util.CommandList
 import ts3musicbot.util.CommandRunner
@@ -316,6 +317,15 @@ class ChatReader(
                                         Pair(false, args)
                                     }
                                 }
+                            }
+
+                            // lyrics command
+                            commandString.contains(
+                                "^(${cmdList.commandList["lyrics"]})$".toRegex(),
+                            ) -> {
+                                printToChat(
+                                    Lyrics().getLyrics(songQueue.nowPlaying())
+                                )
                             }
 
                             // queue-add command
