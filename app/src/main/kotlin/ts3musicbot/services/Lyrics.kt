@@ -44,9 +44,9 @@ class Lyrics : Service(ServiceType.OTHER) {
                 Link(url)
             )
             if (result.code.code != 200) {
-                return listOf("Couldn't find lyrics for the track ${track.toShortString()}!")
+                return listOf("Couldn't find lyrics for track: ${track.toShortString()}")
             } else {
-                return listOf("Showing lyrics for the track ${track.toShortString()}", JSONObject(result.data.data).getString("lyrics"))
+                return listOf("Showing lyrics for track: ${track.toShortString()}", JSONObject(result.data.data).getString("lyrics"))
             }
         }
     }
