@@ -19,14 +19,10 @@ TS3 MusicBot doesn't require you to be an admin on the server you are using the 
 - Supports ncspot! If you don't want to use the official Spotify client, you can use ncspot, which is a lot lighter on system resources, but it requires a Spotify premium account.<br>
 - And more...
 <br>
-<h4>Requirements:</h4>
+<h4>Requirements & Setup options:</h4>
 
-- Linux based OS in a virtual machine or spare computer.<br>
-- Works on Windows via WSL2, but configuration is harder than just installing an actual Linux OS.<br>
-- MacOS might work if you install dependencies via homebrew, but this hasn't been tested.<br>
-
-<h4>Installation:</h4>
-Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for instructions on installation.<br>
+- **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. Refer to the [Docker Setup & Tutorial Guide](file:///C:/Users/razva/Documents/GitHub/ts3-musicbot/README.docker.md) for quick-start commands.
+- **Manual Installation (Linux/WSL2):** Requires manual PulseAudio virtual routing, tmux, xvfb, and JavaFX setup. Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for manual instructions.
 <br>
 <h4>Commands:</h4>
 

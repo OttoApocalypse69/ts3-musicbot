@@ -1,0 +1,29 @@
+# Ignore Git files
+.git
+.gitattributes
+.gitignore
+.gitlab-ci.yml
+
+# Ignore Gradle local cache and build outputs
+.gradle/
+app/build/
+out/
+build/
+
+# Ignore IDE files
+.idea/
+.project
+.classpath
+.settings/
+*.iml
+.editorconfig
+
+# Ignore environment config and credentials
+.env
+*.config
+*.conf
+youtube-dl.cookies
+/tmp/
+
+# Ignore log files
+*.log

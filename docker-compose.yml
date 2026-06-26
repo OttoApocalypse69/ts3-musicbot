@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  ts3-musicbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ts3-musicbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Inject the variables configured in .env into the container environment.
+      # The entrypoint.sh script reads these and writes them to the config file.
+      - TS3_API_KEY=${TS3_API_KEY}
+      - TS3_SERVER_ADDRESS=${TS3_SERVER_ADDRESS}
+      - TS3_SERVER_PORT=${TS3_SERVER_PORT:-9987}
+      - TS3_SERVER_PASSWORD=${TS3_SERVER_PASSWORD}
+      - TS3_CHANNEL_NAME=${TS3_CHANNEL_NAME}
+      - TS3_CHANNEL_PASSWORD=${TS3_CHANNEL_PASSWORD}
+      - TS3_CHANNEL_FILE_PATH=${TS3_CHANNEL_FILE_PATH}
+      - TS3_NICKNAME=${TS3_NICKNAME:-MusicBot}
+      - TS3_MARKET=${TS3_MARKET:-US}
+      - TS3_SPOTIFY_PLAYER=${TS3_SPOTIFY_PLAYER:-ncspot}
+      - TS3_SPOTIFY_USERNAME=${TS3_SPOTIFY_USERNAME}
+      - TS3_SPOTIFY_PASSWORD=${TS3_SPOTIFY_PASSWORD}
+      - TS3_USE_OFFICIAL_TSCLIENT=${TS3_USE_OFFICIAL_TSCLIENT:-true}
+      - TS3_ACCEPT_TS_LICENSE=${TS3_ACCEPT_TS_LICENSE:-true}
+      - TS3_SC_VOLUME=${TS3_SC_VOLUME:-50}
+      - TS3_YT_VOLUME=${TS3_YT_VOLUME:-50}
+      - TS3_BC_VOLUME=${TS3_BC_VOLUME:-50}
+      - TS3_YT_API_KEY=${TS3_YT_API_KEY}
+      - TS3_SP_API_KEY=${TS3_SP_API_KEY}
+      - TS3_SP_CLIENT_ID=${TS3_SP_CLIENT_ID}
+      - TS3_SP_CLIENT_SECRET=${TS3_SP_CLIENT_SECRET}
+    volumes:
+      # Persistent volumes to preserve configurations, cache files, and auth tokens.
+      # This prevents losing client authorizations and cache data on container restarts.
+      - ts3_config:/home/ts3bot/.ts3client
+      - spotify_cache:/home/ts3bot/.cache
+      - spotify_config:/home/ts3bot/.config
+    ports:
+      # Optional mapping to access the local TeamSpeak ClientQuery interface from the host.
+      - "25639:25639"
+    # D-Bus and PulseAudio inside the container run securely without requiring host privileges.
+    # We do NOT require privileged mode.
+    # Security options for Chromium sandbox environments used by spotify clients if needed
+    security_opt:
+      - seccomp:unconfined
+
+volumes:
+  ts3_config:
+    name: ts3_bot_config
+  spotify_cache:
+    name: ts3_spotify_cache
+  spotify_config:
+    name: ts3_spotify_config
