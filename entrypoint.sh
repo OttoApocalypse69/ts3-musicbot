@@ -73,6 +73,6 @@ echo "Channel:       ${TS3_CHANNEL_NAME:-[Default Channel]}"
 echo "Spotify Player: ${TS3_SPOTIFY_PLAYER:-ncspot}"
 echo "--------------------------------------------------"
 
-# Run the Java application, providing module-path for JavaFX
-# Any CLI args passed to docker run will be appended
-exec java --module-path /usr/share/openjfx/lib --add-modules javafx.controls -jar /app/ts3-musicbot.jar --config "$CONFIG_FILE" "$@"
+# Run the bot via the Web UI Python wrapper
+# Any CLI args passed to docker run will be forwarded
+exec python3 /app/web_ui.py --config "$CONFIG_FILE" "$@"

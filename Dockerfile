@@ -45,6 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mpv \
     curl \
     wget \
+    python3 \
     ca-certificates \
     pulseaudio \
     pulseaudio-utils \
@@ -116,16 +117,17 @@ RUN useradd -m -s /bin/bash ts3bot \
 WORKDIR /app
 COPY --from=builder /workspace/app/build/libs/ts3-musicbot.jar /app/ts3-musicbot.jar
 COPY entrypoint.sh /app/entrypoint.sh
+COPY web_ui.py /app/web_ui.py
 
-# Resolve line endings in case entrypoint.sh was copied from a Windows host (CRLF)
-RUN sed -i 's/\r$//' /app/entrypoint.sh \
-    && chmod +x /app/entrypoint.sh
+# Resolve line endings in case scripts were copied from a Windows host (CRLF)
+RUN sed -i 's/\r$//' /app/entrypoint.sh /app/web_ui.py \
+    && chmod +x /app/entrypoint.sh /app/web_ui.py
 
 # Change ownership of directories to non-root user
 RUN chown -R ts3bot:ts3bot /app /opt/teamspeak3 /home/ts3bot
 
-# Expose TeamSpeak ClientQuery default TCP port (internal communication)
-EXPOSE 25639
+# Expose TeamSpeak ClientQuery TCP port and Web UI dashboard HTTP port
+EXPOSE 25639 8080
 
 # Run as non-root user
 USER ts3bot
