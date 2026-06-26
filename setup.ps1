@@ -3,6 +3,7 @@
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
+$checkmark = [char]0x2714
 
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "    TS3 Music Bot - Automated Docker Setup" -ForegroundColor Cyan
@@ -18,10 +19,10 @@ try {
     
     # Check if Docker daemon is running
     $dockerInfo = docker info --format '{{.Name}}' 2>$null
-    if ($null -eq $dockerInfo) {
+    if ($LastExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($dockerInfo)) {
         Write-Error "Docker Desktop is not running. Please start Docker Desktop and try again."
     }
-    Write-Host "✔ Docker is installed and running." -ForegroundColor Green
+    Write-Host "$checkmark Docker is installed and running." -ForegroundColor Green
 }
 catch {
     Write-Host "Error checking Docker: $_" -ForegroundColor Red
@@ -56,9 +57,9 @@ if (-not (Test-Path $envFile)) {
     $envContent = $envContent -replace 'TS3_CHANNEL_NAME=.*', "TS3_CHANNEL_NAME=$channel"
     $envContent | Set-Content $envFile
     
-    Write-Host "✔ .env file initialized with your quick settings." -ForegroundColor Green
+    Write-Host "$checkmark .env file initialized with your quick settings." -ForegroundColor Green
 } else {
-    Write-Host "✔ Existing '.env' file detected. Skipping quick config. (Modify manually if needed)" -ForegroundColor Green
+    Write-Host "$checkmark Existing '.env' file detected. Skipping quick config. (Modify manually if needed)" -ForegroundColor Green
 }
 
 # 3. Build the Docker Image
@@ -66,9 +67,16 @@ Write-Host "`n[3/4] Building TS3 Music Bot Docker image..." -ForegroundColor Yel
 Write-Host "This compiles the Kotlin code and downloads dependencies in an isolated container. Please wait..." -ForegroundColor Gray
 
 try {
-    # Run the docker-compose build
-    docker-compose build
-    Write-Host "✔ Docker image built successfully." -ForegroundColor Green
+    # Run the docker compose build, falling back to docker-compose if needed
+    if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
+        docker-compose build
+    } else {
+        docker compose build
+    }
+    if ($LastExitCode -ne 0) {
+        throw "Docker build failed with exit code $LastExitCode."
+    }
+    Write-Host "$checkmark Docker image built successfully." -ForegroundColor Green
 }
 catch {
     Write-Host "Error building Docker image: $_" -ForegroundColor Red
