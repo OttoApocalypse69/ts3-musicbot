@@ -19,7 +19,7 @@ max_logs = 1000
 def start_bot():
     global bot_process
     # Retrieve arguments passed to the script
-    java_args = ['java', '--module-path', '/usr/share/openjfx/lib', '--add-modules', 'javafx.controls', '-jar', '/app/ts3-musicbot.jar'] + sys.argv[1:]
+    java_args = ['xvfb-run', '-a', 'java', '--module-path', '/usr/share/openjfx/lib', '--add-modules', 'javafx.controls', '-jar', '/app/ts3-musicbot.jar'] + sys.argv[1:]
     print(f"[Web Wrapper] Launching bot: {' '.join(java_args)}", flush=True)
     
     bot_process = subprocess.Popen(
