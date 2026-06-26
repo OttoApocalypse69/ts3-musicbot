@@ -14,13 +14,48 @@ Write-Host "[1/4] Checking Docker installation..." -ForegroundColor Yellow
 try {
     $dockerCheck = Get-Command docker -ErrorAction SilentlyContinue
     if (-not $dockerCheck) {
-        Write-Error "Docker command-line tool not found. Please install Docker Desktop for Windows: https://www.docker.com/products/docker-desktop"
+        Write-Host "Docker command-line tool not found." -ForegroundColor Yellow
+        $installChoice = Read-Host "Would you like to install Docker Desktop automatically via Windows Package Manager (winget)? (Y/N)"
+        if ($installChoice -eq 'Y' -or $installChoice -eq 'y') {
+            Write-Host "Starting Docker Desktop installation via winget..." -ForegroundColor Gray
+            # Run winget install (may trigger UAC prompt)
+            Start-Process winget -ArgumentList "install --id Docker.DockerDesktop --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow
+            Write-Host "$checkmark Installation command completed. Please launch Docker Desktop from your Start menu and restart this script." -ForegroundColor Green
+            Exit 0
+        } else {
+            Write-Error "Docker command-line tool not found. Please install Docker Desktop for Windows: https://www.docker.com/products/docker-desktop"
+        }
     }
     
     # Check if Docker daemon is running
     $dockerInfo = docker info --format '{{.Name}}' 2>$null
     if ($LastExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($dockerInfo)) {
-        Write-Error "Docker Desktop is not running. Please start Docker Desktop and try again."
+        Write-Host "Docker is installed but the Docker daemon is not running." -ForegroundColor Yellow
+        $startChoice = Read-Host "Would you like to start Docker Desktop automatically? (Y/N)"
+        if ($startChoice -eq 'Y' -or $startChoice -eq 'y') {
+            $dockerPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+            if (Test-Path $dockerPath) {
+                Write-Host "Launching Docker Desktop..." -ForegroundColor Gray
+                Start-Process $dockerPath
+                Write-Host "Waiting for Docker daemon to start (this may take up to a minute)..." -ForegroundColor Gray
+                $daemonStarted = $false
+                for ($i = 1; $i -le 30; $i++) {
+                    Start-Sleep -Seconds 2
+                    $dockerInfo = docker info --format '{{.Name}}' 2>$null
+                    if ($LastExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($dockerInfo)) {
+                        $daemonStarted = $true
+                        break
+                    }
+                }
+                if (-not $daemonStarted) {
+                    Write-Error "Docker daemon failed to start in time. Please open Docker Desktop manually."
+                }
+            } else {
+                Write-Error "Docker Desktop executable not found at '$dockerPath'. Please start it manually."
+            }
+        } else {
+            Write-Error "Docker Desktop is not running. Please start Docker Desktop and try again."
+        }
     }
     Write-Host "$checkmark Docker is installed and running." -ForegroundColor Green
 }
