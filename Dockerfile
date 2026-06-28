@@ -11,6 +11,9 @@ COPY gradlew /workspace/
 COPY settings.gradle.kts /workspace/
 COPY gradle.properties /workspace/
 
+# Fix line endings of gradlew and make it executable (handles Windows host CRLF issues)
+RUN sed -i 's/\r$//' /workspace/gradlew && chmod +x /workspace/gradlew
+
 # Copy the app source code
 COPY app/ /workspace/app/
 
