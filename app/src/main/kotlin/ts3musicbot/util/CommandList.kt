@@ -1,56 +1,57 @@
 package ts3musicbot.util
 
 data class CommandList(
-    var commandPrefix: String = "%",
+    var commandPrefix: String = "!",
     // list of available commands. First is the name of the command, second is the default value.
     var commandList: MutableMap<String, String> =
         mapOf(
-            Pair("help", "%help"),
-            Pair("queue-add", "%queue-add"),
-            Pair("queue-playnext", "%queue-playnext"),
-            Pair("queue-playnow", "%queue-playnow"),
-            Pair("queue-play", "%queue-play"),
-            Pair("queue-list", "%queue-list"),
-            Pair("queue-delete", "%queue-delete"),
-            Pair("queue-clear", "%queue-clear"),
-            Pair("queue-shuffle", "%queue-shuffle"),
-            Pair("queue-skip", "%queue-skip"),
-            Pair("queue-voteskip", "%queue-voteskip"),
-            Pair("queue-move", "%queue-move"),
-            Pair("queue-stop", "%queue-stop"),
-            Pair("queue-status", "%queue-status"),
-            Pair("queue-nowplaying", "%queue-nowplaying"),
-            Pair("queue-pause", "%queue-pause"),
-            Pair("queue-resume", "%queue-resume"),
-            Pair("queue-repeat", "%queue-repeat"),
-            Pair("lyrics", "%lyrics"),
-            Pair("info", "%info"),
-            Pair("search", "%search"),
-            Pair("goto", "%goto"),
-            Pair("return", "%return"),
-            Pair("sp-pause", "%sp-pause"),
-            Pair("sp-resume", "%sp-resume"),
-            Pair("sp-play", "%sp-play"),
-            Pair("sp-stop", "%sp-stop"),
-            Pair("sp-skip", "%sp-skip"),
-            Pair("sp-next", "%sp-next"),
-            Pair("sp-prev", "%sp-prev"),
-            Pair("sp-playsong", "%sp-playsong"),
-            Pair("sp-playlist", "%sp-playlist"),
-            Pair("sp-playalbum", "%sp-playalbum"),
-            Pair("sp-nowplaying", "%sp-nowplaying"),
-            Pair("yt-pause", "%yt-pause"),
-            Pair("yt-resume", "%yt-resume"),
-            Pair("yt-play", "%yt-play"),
-            Pair("yt-stop", "%yt-stop"),
-            Pair("yt-playsong", "%yt-playsong"),
-            Pair("yt-nowplaying", "%yt-nowplaying"),
-            Pair("sc-pause", "%sc-pause"),
-            Pair("sc-resume", "%sc-resume"),
-            Pair("sc-play", "%sc-play"),
-            Pair("sc-stop", "%sc-stop"),
-            Pair("sc-playsong", "%sc-playsong"),
-            Pair("sc-nowplaying", "%sc-nowplaying"),
+            Pair("help", "!help"),
+            Pair("play", "!play"),
+            Pair("queue-add", "!queue-add"),
+            Pair("queue-playnext", "!queue-playnext"),
+            Pair("queue-playnow", "!queue-playnow"),
+            Pair("queue-play", "!queue-play"),
+            Pair("queue-list", "!queue-list"),
+            Pair("queue-delete", "!queue-delete"),
+            Pair("queue-clear", "!queue-clear"),
+            Pair("queue-shuffle", "!queue-shuffle"),
+            Pair("queue-skip", "!queue-skip"),
+            Pair("queue-voteskip", "!queue-voteskip"),
+            Pair("queue-move", "!queue-move"),
+            Pair("queue-stop", "!queue-stop"),
+            Pair("queue-status", "!queue-status"),
+            Pair("queue-nowplaying", "!queue-nowplaying"),
+            Pair("queue-pause", "!queue-pause"),
+            Pair("queue-resume", "!queue-resume"),
+            Pair("queue-repeat", "!queue-repeat"),
+            Pair("lyrics", "!lyrics"),
+            Pair("info", "!info"),
+            Pair("search", "!search"),
+            Pair("goto", "!goto"),
+            Pair("return", "!return"),
+            Pair("sp-pause", "!sp-pause"),
+            Pair("sp-resume", "!sp-resume"),
+            Pair("sp-play", "!sp-play"),
+            Pair("sp-stop", "!sp-stop"),
+            Pair("sp-skip", "!sp-skip"),
+            Pair("sp-next", "!sp-next"),
+            Pair("sp-prev", "!sp-prev"),
+            Pair("sp-playsong", "!sp-playsong"),
+            Pair("sp-playlist", "!sp-playlist"),
+            Pair("sp-playalbum", "!sp-playalbum"),
+            Pair("sp-nowplaying", "!sp-nowplaying"),
+            Pair("yt-pause", "!yt-pause"),
+            Pair("yt-resume", "!yt-resume"),
+            Pair("yt-play", "!yt-play"),
+            Pair("yt-stop", "!yt-stop"),
+            Pair("yt-playsong", "!yt-playsong"),
+            Pair("yt-nowplaying", "!yt-nowplaying"),
+            Pair("sc-pause", "!sc-pause"),
+            Pair("sc-resume", "!sc-resume"),
+            Pair("sc-play", "!sc-play"),
+            Pair("sc-stop", "!sc-stop"),
+            Pair("sc-playsong", "!sc-playsong"),
+            Pair("sc-nowplaying", "!sc-nowplaying"),
         ).toMutableMap(),
 ) {
     var helpMessages = createHelpMessages()
@@ -63,6 +64,7 @@ data class CommandList(
                 "\n" +
                     "General commands:\n" +
                     "${commandList["help"]} <command>                              -Shows this help message. Use ${commandList["help"]} <command> to get more help on a specific command.\n" +
+                    "${commandList["play"]} <query/link>                           -Search for a song without Spotify and start playing it immediately.\n" +
                     "${commandList["queue-add"]}                                   -Add track(s) to queue by link or directly searching from yt/sp/sc and adding the first match to the queue.\n" +
                     "${commandList["queue-playnext"]}                              -Add track/playlist/album etc. to the top of the queue. Add multiple links separated by a comma \",\". Shuffle with the -s option\n" +
                     "${commandList["queue-playnow"]}                               -Add track/playlist/album etc. to the top of the queue and start playing it immediately.\n" +
@@ -198,8 +200,19 @@ data class CommandList(
                     "Available options:\n" +
                     "-a, --all    \t-Show all songs in the queue\n" +
                     "-l, --limit <amount> -Limit amount of songs to return.\n" +
-                    "Example - run %queue-list with a limit of 30 songs:\n" +
+                    "Example - run ${commandList["queue-list"]} with a limit of 30 songs:\n" +
                     "${commandList["queue-list"]} --limit 30",
+            ),
+            Pair(
+                "play",
+                "\n" +
+                    "Showing help for ${commandList["play"]} command:\n" +
+                    "${commandList["play"]} searches YouTube without requiring API keys or Spotify Premium and starts playback immediately.\n" +
+                    "You can also pass a direct YouTube, SoundCloud, or Bandcamp link.\n" +
+                    "Example - Search and play a song:\n" +
+                    "${commandList["play"]} never gonna give you up\n" +
+                    "Example - Play a direct link:\n" +
+                    "${commandList["play"]} https://youtu.be/dQw4w9WgXcQ",
             ),
             Pair(
                 "queue-delete",
@@ -517,7 +530,7 @@ data class CommandList(
                     "Showing help for ${commandList["yt-playsong"]} command:\n" +
                     "${commandList["yt-playsong"]} plays a song from YouTube.\n" +
                     "Example - Play a song from YouTube:\n" +
-                    "${commandList["jyt-playsong"]} https://youtu.be/Pn2xd6_-baY\n" +
+                    "${commandList["yt-playsong"]} https://youtu.be/Pn2xd6_-baY\n" +
                     "Example - Play a song from YouTube:\n" +
                     "${commandList["yt-playsong"]} https://www.youtube.com/watch?v=Pn2xd6_-baY",
             ),
@@ -549,8 +562,8 @@ data class CommandList(
                 "sc-stop",
                 "\n" +
                     "Showing help for ${commandList["sc-stop"]} command:\n" +
-                    "${commandList["sc-stop"]} stops SoundCloud playback. This is different from %sc-pause,\n" +
-                    "because %sc-stop also exits the player, which means that the song can't be resumed.",
+                    "${commandList["sc-stop"]} stops SoundCloud playback. This is different from ${commandList["sc-pause"]},\n" +
+                    "because ${commandList["sc-stop"]} also exits the player, which means that the song can't be resumed.",
             ),
             Pair(
                 "sc-playsong",

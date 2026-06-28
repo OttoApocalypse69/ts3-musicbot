@@ -15,6 +15,29 @@ logs_buffer = []
 logs_lock = threading.Lock()
 max_logs = 1000
 
+def configured_command(env_name, default_name):
+    prefix = os.environ.get("TS3_COMMAND_PREFIX", "!")
+    return prefix + os.environ.get(env_name, default_name)
+
+def render_html():
+    replacements = {
+        "__CMD_QUEUE_PLAY__": configured_command("TS3_QUEUE_PLAY_COMMAND", "queue-play"),
+        "__CMD_PLAY__": configured_command("TS3_PLAY_COMMAND", "play"),
+        "__CMD_QUEUE_PAUSE__": configured_command("TS3_QUEUE_PAUSE_COMMAND", "pause"),
+        "__CMD_QUEUE_RESUME__": configured_command("TS3_QUEUE_RESUME_COMMAND", "resume"),
+        "__CMD_QUEUE_STOP__": configured_command("TS3_QUEUE_STOP_COMMAND", "stop"),
+        "__CMD_QUEUE_SKIP__": configured_command("TS3_QUEUE_SKIP_COMMAND", "skip"),
+        "__CMD_QUEUE_SHUFFLE__": configured_command("TS3_QUEUE_SHUFFLE_COMMAND", "shuffle"),
+        "__CMD_QUEUE_LIST__": configured_command("TS3_QUEUE_LIST_COMMAND", "queue"),
+        "__CMD_QUEUE_CLEAR__": configured_command("TS3_QUEUE_CLEAR_COMMAND", "clear"),
+        "__CMD_QUEUE_PLAYNOW__": configured_command("TS3_QUEUE_PLAYNOW_COMMAND", "queue-playnow"),
+        "__CMD_PREFIX__": os.environ.get("TS3_COMMAND_PREFIX", "!"),
+    }
+    html = HTML_CONTENT
+    for placeholder, value in replacements.items():
+        html = html.replace(placeholder, value)
+    return html
+
 # Start Java bot process
 def start_bot():
     global bot_process
@@ -374,35 +397,35 @@ HTML_CONTENT = """<!DOCTYPE html>
             <div class="panel">
                 <h2 class="panel-title">Controls</h2>
                 <div class="control-grid">
-                    <button class="btn" onclick="sendQuickCommand('%queue-play')">
+                    <button class="btn" onclick="sendQuickCommand('__CMD_QUEUE_PLAY__')">
                         <span class="btn-icon">▶</span>
                         <span>Play</span>
                     </button>
-                    <button class="btn" onclick="sendQuickCommand('%queue-pause')">
+                    <button class="btn" onclick="sendQuickCommand('__CMD_QUEUE_PAUSE__')">
                         <span class="btn-icon">⏸</span>
                         <span>Pause</span>
                     </button>
-                    <button class="btn" onclick="sendQuickCommand('%queue-resume')">
+                    <button class="btn" onclick="sendQuickCommand('__CMD_QUEUE_RESUME__')">
                         <span class="btn-icon">🔄</span>
                         <span>Resume</span>
                     </button>
-                    <button class="btn btn-danger" onclick="sendQuickCommand('%queue-stop')">
+                    <button class="btn btn-danger" onclick="sendQuickCommand('__CMD_QUEUE_STOP__')">
                         <span class="btn-icon">⏹</span>
                         <span>Stop</span>
                     </button>
-                    <button class="btn" onclick="sendQuickCommand('%queue-skip')">
+                    <button class="btn" onclick="sendQuickCommand('__CMD_QUEUE_SKIP__')">
                         <span class="btn-icon">⏭</span>
                         <span>Skip</span>
                     </button>
-                    <button class="btn" onclick="sendQuickCommand('%queue-shuffle')">
+                    <button class="btn" onclick="sendQuickCommand('__CMD_QUEUE_SHUFFLE__')">
                         <span class="btn-icon">🔀</span>
                         <span>Shuffle</span>
                     </button>
-                    <button class="btn btn-full" onclick="sendQuickCommand('%queue-list')">
+                    <button class="btn btn-full" onclick="sendQuickCommand('__CMD_QUEUE_LIST__')">
                         <span class="btn-icon">📋</span>
                         <span>List Queue</span>
                     </button>
-                    <button class="btn btn-danger btn-full" onclick="sendQuickCommand('%queue-clear')">
+                    <button class="btn btn-danger btn-full" onclick="sendQuickCommand('__CMD_QUEUE_CLEAR__')">
                         <span class="btn-icon">🗑</span>
                         <span>Clear Queue</span>
                     </button>
@@ -427,11 +450,11 @@ HTML_CONTENT = """<!DOCTYPE html>
                 </div>
                 
                 <form id="cmdForm" class="command-form" onsubmit="submitCommand(event)">
-                    <input type="text" id="cmdInput" class="command-input" placeholder="Type a command (e.g. %queue-add https://youtu.be/...)" autocomplete="off">
+                    <input type="text" id="cmdInput" class="command-input" placeholder="Type a command (e.g. __CMD_PLAY__ never gonna give you up)" autocomplete="off">
                     <button type="submit" class="btn-send">Send</button>
                 </form>
                 <div class="help-tip">
-                    Tip: Command prefix is <code>%</code> (or whatever is configured). Type <code>%help</code> to list commands.
+                    Tip: Command prefix is <code>__CMD_PREFIX__</code>. Type <code>__CMD_PREFIX__help</code> to list commands.
                 </div>
             </div>
         </div>
@@ -540,7 +563,7 @@ class BotHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.end_headers()
-            self.wfile.write(HTML_CONTENT.encode('utf-8'))
+            self.wfile.write(render_html().encode('utf-8'))
         elif url_path == '/api/logs':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

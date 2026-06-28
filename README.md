@@ -21,12 +21,13 @@ TS3 MusicBot doesn't require you to be an admin on the server you are using the 
 <br>
 <h4>Requirements & Setup options:</h4>
 
-- **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. Refer to the [Docker Setup & Tutorial Guide](file:///C:/Users/razva/Documents/GitHub/ts3-musicbot/README.docker.md) for quick-start commands.
+- **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. Refer to the [Docker Setup & Tutorial Guide](README.docker.md) for quick-start commands.
 - **Manual Installation (Linux/WSL2):** Requires manual PulseAudio virtual routing, tmux, xvfb, and JavaFX setup. Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for manual instructions.
 <br>
 <h4>Commands:</h4>
 
-- All commands start with the "%" character. You have to enter these in the chat of the channel your bot is connected to.<br>
+- All commands start with the "!" character by default. You have to enter these in the chat of the channel your bot is connected to.<br>
+- Use `!play <song name or link>` for simple playback without Spotify Premium or API keys. It tries YouTube first, then SoundCloud and Bandcamp, for example `!play never gonna give you up`.<br>
 - Check Command List wiki page for a list of commands: https://gitlab.com/Bettehem/ts3-musicbot/wikis/command-list<br>
 
 <br>

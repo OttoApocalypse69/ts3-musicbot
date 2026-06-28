@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dbus \
     dbus-x11 \
     mpv \
+    netcat-openbsd \
     curl \
     wget \
     python3 \

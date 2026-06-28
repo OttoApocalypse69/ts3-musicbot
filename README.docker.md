@@ -54,10 +54,27 @@ TS3_NICKNAME=MusicBot
 TS3_CHANNEL_NAME=Music Channel
 TS3_ACCEPT_TS_LICENSE=true
 
-# Spotify settings (Optional - requires Premium)
-TS3_SPOTIFY_PLAYER=ncspot
-TS3_SPOTIFY_USERNAME=your_username
-TS3_SPOTIFY_PASSWORD=your_password
+# Spotify settings are optional and require Premium. Leave disabled for YouTube/SoundCloud/Bandcamp playback.
+TS3_SPOTIFY_PLAYER=disabled
+TS3_SPOTIFY_USERNAME=
+TS3_SPOTIFY_PASSWORD=
+```
+
+#### Chat Commands
+By default, commands use the `!` prefix and short names:
+```text
+!play never gonna give you up
+!queue
+!skip
+```
+`!play` accepts direct links or plain song names. Plain text searches YouTube first, then falls back to SoundCloud and Bandcamp when needed.
+
+You can override the command names in `.env`:
+```env
+TS3_COMMAND_PREFIX=!
+TS3_PLAY_COMMAND=play
+TS3_QUEUE_SKIP_COMMAND=skip
+TS3_QUEUE_LIST_COMMAND=queue
 ```
 
 #### 2. Build the Docker Image

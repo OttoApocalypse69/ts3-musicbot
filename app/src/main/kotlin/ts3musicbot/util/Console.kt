@@ -7,6 +7,8 @@ import kotlinx.coroutines.launch
 import ts3musicbot.client.Client
 import ts3musicbot.client.OfficialTSClient
 import ts3musicbot.client.TeamSpeak
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -17,13 +19,13 @@ class Console(
     private val client: Client,
 ) {
     private val commandRunner = CommandRunner()
+    private val stdinReader = BufferedReader(InputStreamReader(System.`in`))
 
     suspend fun startConsole() {
         // start console
-        val console = System.console()
         println("Enter command \"help\" for all commands.")
         loop@ while (true) {
-            val userCommand = console.readLine("Command: ")
+            val userCommand = readInputLine("Command: ") ?: break@loop
             when (val command = userCommand.replace("\\s+.*$".toRegex(), "")) {
                 "help" ->
                     println(
@@ -120,10 +122,9 @@ class Console(
     }
 
     private suspend fun exit(command: String) {
-        val console = System.console()
         var confirmed = false
         while (!confirmed) {
-            val exitTeamSpeak = console.readLine("Close TeamSpeak? [Y/n]: ").lowercase()
+            val exitTeamSpeak = (readInputLine("Close TeamSpeak? [Y/n]: ") ?: "").lowercase()
             if (exitTeamSpeak.contentEquals("y") || exitTeamSpeak.contentEquals("yes") || exitTeamSpeak.contentEquals("")) {
                 confirmed = true
                 when (client) {
@@ -149,6 +150,16 @@ class Console(
         commandRunner.runCommand("tmux kill-session -t spotify_player", ignoreOutput = true)
         consoleUpdateListener.onCommandIssued(command)
         exitProcess(0)
+    }
+
+    private fun readInputLine(prompt: String): String? {
+        val console = System.console()
+        return if (console != null) {
+            console.readLine(prompt)
+        } else {
+            print(prompt)
+            stdinReader.readLine()
+        }
     }
 }
 

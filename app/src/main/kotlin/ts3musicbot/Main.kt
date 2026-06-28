@@ -189,85 +189,85 @@ class Main :
                         "-a", "--apikey" -> {
                             // "if (args.size >= argPos +1)" is a safe check
                             // in case a user provides a flag, but no argument
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 apiKey = args[argPos + 1]
                             }
                         }
 
                         "-s", "--serveraddress" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 serverAddress = args[argPos + 1]
                             }
                         }
 
                         "-p", "--serverport" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 serverPort = args[argPos + 1].toInt()
                             }
                         }
 
                         "-P", "--serverpassword" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 serverPassword = args[argPos + 1]
                             }
                         }
 
                         "-c", "--channelname" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 channelName = args[argPos + 1]
                             }
                         }
 
                         "--channelpassword" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 channelPassword = args[argPos + 1]
                             }
                         }
 
                         "-C", "--channelfile" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 channelFilePath = args[argPos + 1]
                             }
                         }
 
                         "-n", "--nickname" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 nickname = args[argPos + 1]
                             }
                         }
 
                         "-m", "--market" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 market = args[argPos + 1]
                             }
                         }
 
                         "--spotify" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spotifyPlayer = args[argPos + 1]
                             }
                         }
 
                         "--sp-user" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spotifyUsername = args[argPos + 1]
                             }
                         }
 
                         "--sp-pass" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spotifyPassword = args[argPos + 1]
                             }
                         }
 
                         "--config" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 configFile = args[argPos + 1]
                             }
                         }
 
                         "--command-config" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 commandConfig = args[argPos + 1]
                             }
                         }
@@ -281,43 +281,43 @@ class Main :
                         }
 
                         "--sc-volume" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 scVolume = args[argPos + 1].toInt()
                             }
                         }
 
                         "--yt-volume" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 ytVolume = args[argPos + 1].toInt()
                             }
                         }
 
                         "--bc-volume" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 bcVolume = args[argPos + 1].toInt()
                             }
                         }
 
                         "--yt-api-key" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 ytApiKey = args[argPos + 1]
                             }
                         }
 
                         "--sp-api-key" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spApiKey = args[argPos + 1]
                             }
                         }
 
                         "--sp-client-id" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spClientId = args[argPos + 1]
                             }
                         }
 
                         "--sp-client-secret" -> {
-                            if (args.size >= argPos + 1) {
+                            if (args.size > argPos + 1) {
                                 spClientSecret = args[argPos + 1]
                             }
                         }
@@ -576,7 +576,7 @@ class Main :
             if (commandsFile.exists()) {
                 commandsFile.readLines().forEach { line ->
                     if (line.contains("^[A-Z_]+\\s*=\\S*".toRegex())) {
-                        val (key, value) = line.lowercase().replaceFirst('_', '-').split("=")
+                        val (key, value) = line.lowercase().replace('_', '-').split("=")
                         if (key == "command-prefix") {
                             prefix = value
                         } else {
@@ -970,8 +970,10 @@ class Main :
                     FileChooser.ExtensionFilter("Chat File", listOf("*.html", "*.txt"))
 
                 val file = fileChooser.showOpenDialog(window)
-                inputFilePath = file.absolutePath
-                channelFilePathEditText.text = inputFilePath
+                if (file != null) {
+                    inputFilePath = file.absolutePath
+                    channelFilePathEditText.text = inputFilePath
+                }
             }
 
             loadCustomCommandsButton -> {
@@ -982,7 +984,9 @@ class Main :
                     FileChooser.ExtensionFilter("Custom Commands config", listOf("*.config", "*.conf"))
 
                 val file = fileChooser.showOpenDialog(window)
-                commandList = loadCommands(file)
+                if (file != null) {
+                    commandList = loadCommands(file)
+                }
             }
 
             saveSettingsButton -> saveSettings(getSettings(), true)

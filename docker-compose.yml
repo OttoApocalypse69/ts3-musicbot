@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ts3-musicbot:
     build:
@@ -21,7 +19,7 @@ services:
       - TS3_CHANNEL_FILE_PATH=${TS3_CHANNEL_FILE_PATH}
       - TS3_NICKNAME=${TS3_NICKNAME:-MusicBot}
       - TS3_MARKET=${TS3_MARKET:-US}
-      - TS3_SPOTIFY_PLAYER=${TS3_SPOTIFY_PLAYER:-ncspot}
+      - TS3_SPOTIFY_PLAYER=${TS3_SPOTIFY_PLAYER:-disabled}
       - TS3_SPOTIFY_USERNAME=${TS3_SPOTIFY_USERNAME}
       - TS3_SPOTIFY_PASSWORD=${TS3_SPOTIFY_PASSWORD}
       - TS3_USE_OFFICIAL_TSCLIENT=${TS3_USE_OFFICIAL_TSCLIENT:-true}
@@ -42,6 +40,8 @@ services:
     ports:
       # Optional mapping to access the local TeamSpeak ClientQuery interface from the host.
       - "25639:25639"
+      # Optional local web dashboard.
+      - "8080:8080"
     # D-Bus and PulseAudio inside the container run securely without requiring host privileges.
     # We do NOT require privileged mode.
     # Security options for Chromium sandbox environments used by spotify clients if needed

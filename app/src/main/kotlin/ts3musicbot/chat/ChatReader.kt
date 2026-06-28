@@ -65,9 +65,11 @@ class ChatReader(
     private var songQueue = SongQueue(botSettings, client, spotify, soundCloud, youTube, bandcamp, this)
 
     init {
-        // initialise spotify token
-        CoroutineScope(IO).launch {
-            spotify.updateToken()
+        if (botSettings.spotifyPlayer != "disabled") {
+            // initialise spotify token only when Spotify playback is enabled
+            CoroutineScope(IO).launch {
+                spotify.updateToken()
+            }
         }
     }
 
@@ -251,6 +253,130 @@ class ChatReader(
                  * @return Returns a Pair containing a boolean value indicating whether the command was successful, and any extra data.
                  */
                 suspend fun executeCommand(commandString: String): Pair<Boolean, Any?> {
+                    fun commandValue(name: String) = cmdList.commandList[name].orEmpty()
+
+                    fun shellArg(value: String): String = "'${value.replace("'", "'\"'\"'")}'"
+
+                    fun ytdlpCanResolve(target: String): Boolean {
+                        val result =
+                            commandRunner.runCommand(
+                                "yt-dlp --no-playlist --simulate --quiet --no-warnings ${shellArg(target)}",
+                                printOutput = false,
+                                printErrors = false,
+                            )
+                        return result.errorText.isEmpty()
+                    }
+
+                    suspend fun executePlayCommand(playCommandString: String): Pair<Boolean, Any?> {
+                        val playCommand = commandValue("play")
+                        val input = removeTags(playCommandString.substringAfter(playCommand, "")).trim()
+                        if (input.isEmpty()) {
+                            val usage = "Usage: $playCommand <song name or YouTube/SoundCloud/Bandcamp link>"
+                            printToChat(listOf(usage))
+                            commandListener.onCommandExecuted(playCommandString, usage)
+                            commandJob.complete()
+                            return Pair(false, usage)
+                        }
+
+                        val inputLink = Link(input)
+                        if (inputLink.serviceType() == ServiceType.SPOTIFY || input.startsWith("spotify:", ignoreCase = true)) {
+                            val spotifyDisabled =
+                                "Spotify playback is disabled for this bot. Try a song name instead, for example: " +
+                                    "$playCommand never gonna give you up"
+                            printToChat(listOf(spotifyDisabled))
+                            commandListener.onCommandExecuted(playCommandString, spotifyDisabled, input)
+                            commandJob.complete()
+                            return Pair(false, input)
+                        }
+
+                        val isDirectLink = input.contains("^https?://\\S+$".toRegex())
+                        var serviceType = if (isDirectLink) inputLink.serviceType() else ServiceType.YOUTUBE
+                        var playTarget = if (isDirectLink) input else "ytdl://ytsearch1:$input"
+                        var probeTarget = if (isDirectLink) input else "ytsearch1:$input"
+                        var resolved = false
+                        val volume =
+                            when (serviceType) {
+                                ServiceType.SOUNDCLOUD -> botSettings.scVolume
+                                ServiceType.BANDCAMP -> botSettings.bcVolume
+                                else -> botSettings.ytVolume
+                            }
+
+                        printToChat(
+                            listOf(
+                                if (isDirectLink) {
+                                    "Opening link..."
+                                } else {
+                                    "Searching YouTube for: $input"
+                                },
+                            ),
+                        )
+                        commandListener.onCommandProgress(playCommandString, "Resolving $probeTarget", probeTarget)
+
+                        resolved = ytdlpCanResolve(probeTarget)
+                        if (!resolved && !isDirectLink) {
+                            commandListener.onCommandProgress(playCommandString, "Trying SoundCloud search for: $input", input)
+                            val soundCloudResult =
+                                soundCloud
+                                    .search(SearchType("track"), SearchQuery(input), 1)
+                                    .results
+                                    .firstOrNull()
+                            if (soundCloudResult != null && ytdlpCanResolve(soundCloudResult.link.link)) {
+                                serviceType = ServiceType.SOUNDCLOUD
+                                playTarget = soundCloudResult.link.link
+                                probeTarget = soundCloudResult.link.link
+                                resolved = true
+                            }
+                        }
+                        if (!resolved && !isDirectLink) {
+                            commandListener.onCommandProgress(playCommandString, "Trying Bandcamp search for: $input", input)
+                            val bandcampResult =
+                                bandcamp
+                                    .search(SearchType("track"), SearchQuery(input), 1)
+                                    .results
+                                    .firstOrNull()
+                            if (bandcampResult != null && ytdlpCanResolve(bandcampResult.link.link)) {
+                                serviceType = ServiceType.BANDCAMP
+                                playTarget = bandcampResult.link.link
+                                probeTarget = bandcampResult.link.link
+                                resolved = true
+                            }
+                        }
+
+                        if (!resolved) {
+                            val notFound = "I couldn't find a playable result for: $input"
+                            printToChat(listOf(notFound))
+                            commandListener.onCommandExecuted(playCommandString, notFound, input)
+                            commandJob.complete()
+                            return Pair(false, input)
+                        }
+
+                        commandRunner.runCommand("pkill mpv", ignoreOutput = true)
+                        launch {
+                            commandRunner.runCommand(
+                                "mpv --terminal=no --no-video --volume=${
+                                    when (serviceType) {
+                                        ServiceType.SOUNDCLOUD -> botSettings.scVolume
+                                        ServiceType.BANDCAMP -> botSettings.bcVolume
+                                        else -> volume
+                                    }
+                                } ${shellArg(playTarget)}",
+                                inheritIO = true,
+                                ignoreOutput = true,
+                                printCommand = true,
+                            )
+                        }
+                        val playing =
+                            if (isDirectLink) {
+                                "Playing link."
+                            } else {
+                                "Playing ${serviceType.name.lowercase().replace('_', ' ')} result for: $input"
+                            }
+                        printToChat(listOf(playing))
+                        commandListener.onCommandExecuted(playCommandString, playing, playTarget)
+                        commandJob.complete()
+                        return Pair(true, playTarget)
+                    }
+
                     // parse and execute commands
                     if (cmdList.commandList.any { commandString.startsWith(it.value) } || commandString.startsWith("%help")) {
                         println("Running command $commandString")
@@ -326,6 +452,11 @@ class ChatReader(
                                 printToChat(
                                     Lyrics().getLyrics(songQueue.nowPlaying())
                                 )
+                            }
+
+                            // simple no-Spotify play command
+                            commandString.contains("^${Regex.escape(commandValue("play"))}(\\s+.*)?$".toRegex()) -> {
+                                return executePlayCommand(commandString)
                             }
 
                             // queue-add command
