@@ -122,12 +122,13 @@ catch {
 # 4. Instructions for startup
 Write-Host "`n[4/4] Setup complete!" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "To launch your bot in background mode, run:" -ForegroundColor White
-Write-Host "  docker-compose up -d" -ForegroundColor Green
+Write-Host "To apply changes and launch your bot, run:" -ForegroundColor White
+Write-Host "  docker compose down" -ForegroundColor Yellow
+Write-Host "  docker compose up -d" -ForegroundColor Green
 Write-Host ""
 Write-Host "To monitor execution logs, run:" -ForegroundColor White
 Write-Host "  docker logs -f ts3-musicbot" -ForegroundColor Green
 Write-Host ""
 Write-Host "To stop the bot, run:" -ForegroundColor White
-Write-Host "  docker-compose down" -ForegroundColor Green
+Write-Host "  docker compose down" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Cyan

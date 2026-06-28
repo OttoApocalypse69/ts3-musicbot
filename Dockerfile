@@ -130,8 +130,6 @@ RUN chown -R ts3bot:ts3bot /app /opt/teamspeak3 /home/ts3bot
 # Expose TeamSpeak ClientQuery TCP port and Web UI dashboard HTTP port
 EXPOSE 25639 8080
 
-# Run as non-root user
-USER ts3bot
 WORKDIR /home/ts3bot
 
 # Verify container health (checks if Java application process is alive)

@@ -7,20 +7,24 @@ set -e
 # from environment variables, and launches the Java application.
 # ==============================================================================
 
-# Ensure dbus session bus is started and environment variable is exported
+# Fix ownership of the home directory (handles Windows volume mount permission issues)
+echo "Fixing home directory permissions..."
+chown -R ts3bot:ts3bot /home/ts3bot
+
+# Ensure dbus session bus is started as ts3bot and environment variable is exported
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     echo "Starting D-Bus session bus..."
-    eval $(dbus-launch --sh-syntax)
+    # Launch dbus-launch as ts3bot and evaluate the output in the current environment
+    eval $(su -p -s /bin/bash -c "dbus-launch --sh-syntax" ts3bot)
 fi
 
-# Ensure PulseAudio is running and virtual devices are initialized
+# Ensure PulseAudio is running as ts3bot and virtual devices are initialized
 echo "Starting PulseAudio daemon..."
-# Run pulseaudio as a user-level daemon, disabling idle exit and hardware checks
-pulseaudio --start --exit-idle-time=-1 --system=false
+su -p -s /bin/bash -c "pulseaudio --start --exit-idle-time=-1 --system=false" ts3bot
 
 # Wait for PulseAudio to start up and register
 for i in {1..10}; do
-    if pactl info >/dev/null 2>&1; then
+    if su -p -s /bin/bash -c "pactl info" ts3bot >/dev/null 2>&1; then
         echo "PulseAudio is ready."
         break
     fi
@@ -28,9 +32,9 @@ for i in {1..10}; do
     sleep 0.5
 done
 
-# Set PulseAudio default devices (in case they weren't set by default.pa)
-pactl set-default-sink VirtualSink || true
-pactl set-default-source VirtualSink.monitor || true
+# Set PulseAudio default devices (must be run as the user running pulseaudio)
+su -p -s /bin/bash -c "pactl set-default-sink VirtualSink" ts3bot || true
+su -p -s /bin/bash -c "pactl set-default-source VirtualSink.monitor" ts3bot || true
 
 # Generate the ts3-musicbot.config file dynamically from env variables
 CONFIG_FILE="/home/ts3bot/ts3-musicbot.config"
@@ -62,6 +66,7 @@ SP_CLIENT_ID=${TS3_SP_CLIENT_ID:-}
 SP_CLIENT_SECRET=${TS3_SP_CLIENT_SECRET:-}
 EOF
 
+<<<<<<< HEAD
 echo "Generating command configuration at $COMMAND_CONFIG_FILE..."
 
 cat <<EOF > "$COMMAND_CONFIG_FILE"
@@ -89,6 +94,11 @@ EOF
 # Ensure permissions are correct on the generated config file
 chmod 600 "$CONFIG_FILE"
 chmod 600 "$COMMAND_CONFIG_FILE"
+=======
+# Ensure permissions and ownership are correct on the generated config file
+chmod 600 "$CONFIG_FILE"
+chown ts3bot:ts3bot "$CONFIG_FILE"
+>>>>>>> 706c7889e06a7bfe6abb82eac726de593b27ca23
 
 # Log connection details (without sensitive passwords)
 echo "--------------------------------------------------"
@@ -100,6 +110,12 @@ echo "Spotify Player: ${TS3_SPOTIFY_PLAYER:-disabled}"
 echo "Command Prefix: ${TS3_COMMAND_PREFIX:-!}"
 echo "--------------------------------------------------"
 
+<<<<<<< HEAD
 # Run the bot via the Web UI Python wrapper
 # Any CLI args passed to docker run will be forwarded
 exec python3 /app/web_ui.py --config "$CONFIG_FILE" --command-config "$COMMAND_CONFIG_FILE" "$@"
+=======
+# Run the bot via the Web UI Python wrapper as the ts3bot user
+# Forward all arguments
+exec su -p -s /bin/bash -c "exec python3 /app/web_ui.py --config \"$CONFIG_FILE\" \"$@\"" ts3bot
+>>>>>>> 706c7889e06a7bfe6abb82eac726de593b27ca23
