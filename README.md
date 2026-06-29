@@ -21,7 +21,7 @@ TS3 MusicBot doesn't require you to be an admin on the server you are using the 
 <br>
 <h4>Requirements & Setup options:</h4>
 
-- **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. Refer to the [Docker Setup & Tutorial Guide](README.docker.md) for quick-start commands.
+- **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. On Windows, run `.\setup.ps1` to be prompted for the bot nickname, TeamSpeak server address, server password, and channel. Refer to the [Docker Setup & Tutorial Guide](README.docker.md) for quick-start commands.
 - **Manual Installation (Linux/WSL2):** Requires manual PulseAudio virtual routing, tmux, xvfb, and JavaFX setup. Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for manual instructions.
 <br>
 <h4>Commands:</h4>

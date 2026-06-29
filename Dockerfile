@@ -11,6 +11,9 @@ COPY gradlew /workspace/
 COPY settings.gradle.kts /workspace/
 COPY gradle.properties /workspace/
 
+# Fix line endings of gradlew and make it executable (handles Windows host CRLF issues)
+RUN sed -i 's/\r$//' /workspace/gradlew && chmod +x /workspace/gradlew
+
 # Copy the app source code
 COPY app/ /workspace/app/
 
@@ -34,7 +37,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # - mpv: Media player for playing YouTube, SoundCloud, and Bandcamp streams
 # - curl & wget: File downloading utilities
 # - pulseaudio & pulseaudio-utils: Virtual sound routing subsystem
-# - libglib2.0-0, libnss3, libegl1, libdbus-1-3, libasound2, libpulse0, libxcursor1, libxcomposite1, libxdamage1, libxrandr2, libxtst6, libxi6, libxkbcommon-x11-0, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libxcb-xinerama0, libxcb-randr0, libfontconfig1, libfreetype6, libx11-xcb1, libgl1, libxft2: TeamSpeak 3 Client dependencies
+# - libglib2.0-0, libnss3, libegl1, libdbus-1-3, libasound2, libpulse0,
+#   libxcursor1, libxcomposite1, libxdamage1, libxrandr2, libxtst6, libxi6,
+#   libxkbcommon-x11-0, libxcb-*, libfontconfig1, libfreetype6, libx11-xcb1,
+#   libgl1, libxft2: TeamSpeak 3 Client and Qt/XCB runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jre \
     openjfx \
@@ -57,6 +63,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libdbus-1-3 \
     libasound2 \
     libpulse0 \
+    libevent-2.1-7 \
+    libpci3 \
+    libxslt1.1 \
+    libatomic1 \
     libxcursor1 \
     libxcomposite1 \
     libxdamage1 \
@@ -64,11 +74,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxtst6 \
     libxi6 \
     libxkbcommon-x11-0 \
+    libxcb-icccm4 \
     libxcb-image0 \
     libxcb-keysyms1 \
     libxcb-render-util0 \
     libxcb-xinerama0 \
     libxcb-randr0 \
+    libxcb-shape0 \
+    libxcb-sync1 \
+    libxcb-xfixes0 \
+    libxcb-xkb1 \
     libfontconfig1 \
     libfreetype6 \
     libx11-xcb1 \
@@ -124,8 +139,15 @@ COPY web_ui.py /app/web_ui.py
 RUN sed -i 's/\r$//' /app/entrypoint.sh /app/web_ui.py \
     && chmod +x /app/entrypoint.sh /app/web_ui.py
 
-# Change ownership of directories to non-root user
-RUN chown -R ts3bot:ts3bot /app /opt/teamspeak3 /home/ts3bot
+# Create user runtime/config directories and assign ownership to the non-root user
+RUN mkdir -p \
+        /home/ts3bot/.config/pulse \
+        /home/ts3bot/.cache \
+        /home/ts3bot/.local/state \
+        /home/ts3bot/.ts3client \
+        /tmp/runtime-ts3bot \
+    && chmod 700 /tmp/runtime-ts3bot \
+    && chown -R ts3bot:ts3bot /app /opt/teamspeak3 /home/ts3bot /tmp/runtime-ts3bot
 
 # Expose TeamSpeak ClientQuery TCP port and Web UI dashboard HTTP port
 EXPOSE 25639 8080

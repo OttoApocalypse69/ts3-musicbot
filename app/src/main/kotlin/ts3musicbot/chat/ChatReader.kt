@@ -24,7 +24,6 @@ import ts3musicbot.services.SongLink
 import ts3musicbot.services.SoundCloud
 import ts3musicbot.services.Spotify
 import ts3musicbot.services.YouTube
-import ts3musicbot.services.Lyrics
 import ts3musicbot.util.BotSettings
 import ts3musicbot.util.CommandList
 import ts3musicbot.util.CommandRunner
@@ -36,6 +35,8 @@ import ts3musicbot.util.SearchResult
 import ts3musicbot.util.SearchResults
 import ts3musicbot.util.SearchType
 import ts3musicbot.util.SongQueue
+import ts3musicbot.util.Name
+import ts3musicbot.util.Playability
 import ts3musicbot.util.Track
 import ts3musicbot.util.TrackList
 import ts3musicbot.util.playerctl
@@ -289,11 +290,13 @@ class ChatReader(
                             return Pair(false, input)
                         }
 
-                        val isDirectLink = input.contains("^https?://\\S+$".toRegex())
+                        var isDirectLink = input.contains("^https?://\\S+$".toRegex())
                         var serviceType = if (isDirectLink) inputLink.serviceType() else ServiceType.YOUTUBE
                         var playTarget = if (isDirectLink) input else "ytdl://ytsearch1:$input"
                         var probeTarget = if (isDirectLink) input else "ytsearch1:$input"
                         var resolved = false
+                        var title = ""
+                        var resolvedLink = ""
                         val volume =
                             when (serviceType) {
                                 ServiceType.SOUNDCLOUD -> botSettings.scVolume
@@ -312,33 +315,84 @@ class ChatReader(
                         )
                         commandListener.onCommandProgress(playCommandString, "Resolving $probeTarget", probeTarget)
 
-                        resolved = ytdlpCanResolve(probeTarget)
-                        if (!resolved && !isDirectLink) {
-                            commandListener.onCommandProgress(playCommandString, "Trying SoundCloud search for: $input", input)
-                            val soundCloudResult =
-                                soundCloud
-                                    .search(SearchType("track"), SearchQuery(input), 1)
-                                    .results
-                                    .firstOrNull()
-                            if (soundCloudResult != null && ytdlpCanResolve(soundCloudResult.link.link)) {
-                                serviceType = ServiceType.SOUNDCLOUD
-                                playTarget = soundCloudResult.link.link
-                                probeTarget = soundCloudResult.link.link
-                                resolved = true
+                        if (!isDirectLink) {
+                            try {
+                                val results = youTube.search(SearchType("track"), SearchQuery(input), 1)
+                                val firstResult = results.results.firstOrNull()
+                                if (firstResult != null) {
+                                    serviceType = ServiceType.YOUTUBE
+                                    playTarget = firstResult.link.link
+                                    title = firstResult.result.name.name
+                                    resolvedLink = firstResult.link.link
+                                    resolved = true
+                                }
+                            } catch (e: Exception) {
+                                // Fallback
                             }
                         }
+
+                        if (!resolved) {
+                            resolved = ytdlpCanResolve(probeTarget)
+                            if (resolved) {
+                                resolvedLink = input
+                            }
+                        }
+
+                        if (!resolved && !isDirectLink) {
+                            commandListener.onCommandProgress(playCommandString, "Trying SoundCloud search for: $input", input)
+                            try {
+                                val soundCloudResult =
+                                    soundCloud
+                                        .search(SearchType("track"), SearchQuery(input), 1)
+                                        .results
+                                        .firstOrNull()
+                                if (soundCloudResult != null) {
+                                    serviceType = ServiceType.SOUNDCLOUD
+                                    playTarget = soundCloudResult.link.link
+                                    title = soundCloudResult.result.name.name
+                                    resolvedLink = soundCloudResult.link.link
+                                    resolved = true
+                                }
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+
                         if (!resolved && !isDirectLink) {
                             commandListener.onCommandProgress(playCommandString, "Trying Bandcamp search for: $input", input)
-                            val bandcampResult =
-                                bandcamp
-                                    .search(SearchType("track"), SearchQuery(input), 1)
-                                    .results
-                                    .firstOrNull()
-                            if (bandcampResult != null && ytdlpCanResolve(bandcampResult.link.link)) {
-                                serviceType = ServiceType.BANDCAMP
-                                playTarget = bandcampResult.link.link
-                                probeTarget = bandcampResult.link.link
-                                resolved = true
+                            try {
+                                val bandcampResult =
+                                    bandcamp
+                                        .search(SearchType("track"), SearchQuery(input), 1)
+                                        .results
+                                        .firstOrNull()
+                                if (bandcampResult != null) {
+                                    serviceType = ServiceType.BANDCAMP
+                                    playTarget = bandcampResult.link.link
+                                    title = bandcampResult.result.name.name
+                                    resolvedLink = bandcampResult.link.link
+                                    resolved = true
+                                }
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+
+                        if (isDirectLink && resolved) {
+                            resolvedLink = input
+                            try {
+                                if (serviceType == ServiceType.YOUTUBE) {
+                                    val track = youTube.fetchVideo(Link(input))
+                                    title = track.title.name
+                                } else if (serviceType == ServiceType.SOUNDCLOUD) {
+                                    val track = soundCloud.fetchTrack(Link(input))
+                                    title = track.title.name
+                                } else if (serviceType == ServiceType.BANDCAMP) {
+                                    val track = bandcamp.fetchTrack(Link(input))
+                                    title = track.title.name
+                                }
+                            } catch (e: Exception) {
+                                // Ignore
                             }
                         }
 
@@ -350,29 +404,17 @@ class ChatReader(
                             return Pair(false, input)
                         }
 
+                        songQueue.stopQueue()
                         commandRunner.runCommand("pkill mpv", ignoreOutput = true)
-                        launch {
-                            commandRunner.runCommand(
-                                "mpv --terminal=no --no-video --volume=${
-                                    when (serviceType) {
-                                        ServiceType.SOUNDCLOUD -> botSettings.scVolume
-                                        ServiceType.BANDCAMP -> botSettings.bcVolume
-                                        else -> volume
-                                    }
-                                } ${shellArg(playTarget)}",
-                                inheritIO = true,
-                                ignoreOutput = true,
-                                printCommand = true,
-                            )
-                        }
-                        val playing =
-                            if (isDirectLink) {
-                                "Playing link."
-                            } else {
-                                "Playing ${serviceType.name.lowercase().replace('_', ' ')} result for: $input"
-                            }
-                        printToChat(listOf(playing))
-                        commandListener.onCommandExecuted(playCommandString, playing, playTarget)
+                        songQueue.clearQueue()
+                        val track = Track(
+                            title = Name(if (title.isNotEmpty()) title else if (isDirectLink) "Direct Link" else input),
+                            link = Link(resolvedLink.ifEmpty { playTarget }),
+                            playability = Playability(isPlayable = true)
+                        )
+                        songQueue.addToQueue(track)
+                        songQueue.startQueue()
+                        commandListener.onCommandExecuted(playCommandString, "Started playback.", playTarget)
                         commandJob.complete()
                         return Pair(true, playTarget)
                     }
@@ -445,14 +487,6 @@ class ChatReader(
                                 }
                             }
 
-                            // lyrics command
-                            commandString.contains(
-                                "^(${cmdList.commandList["lyrics"]})$".toRegex(),
-                            ) -> {
-                                printToChat(
-                                    Lyrics().getLyrics(songQueue.nowPlaying())
-                                )
-                            }
 
                             // simple no-Spotify play command
                             commandString.contains("^${Regex.escape(commandValue("play"))}(\\s+.*)?$".toRegex()) -> {
@@ -1083,7 +1117,7 @@ class ChatReader(
                                 }
                             }
                             // queue-list command
-                            commandString.contains("^${cmdList.commandList["queue-list"]}(\\s+)?(.+)?".toRegex()) -> {
+                            commandString.contains("^(${cmdList.commandList["queue-list"]}|${Regex.escape(cmdList.commandList["queue-list-short"].orEmpty())})(\\s+.*)?$".toRegex()) -> {
                                 if (songQueue.getState() != SongQueue.State.QUEUE_STOPPED) {
                                     val track = songQueue.nowPlaying()
                                     val strBuilder = StringBuilder()
@@ -1691,8 +1725,8 @@ class ChatReader(
                                 commandJob.complete()
                                 return Pair(isSuccessful, null)
                             }
-                            // queue-shuffle command
-                            commandString.contains("^${cmdList.commandList["queue-shuffle"]}$".toRegex()) -> {
+                            // queue-shuffle & shuffle command
+                            commandString.contains("^(${cmdList.commandList["queue-shuffle"]}|${cmdList.commandList["shuffle"]})$".toRegex()) -> {
                                 songQueue.shuffleQueue()
                                 printToChat(listOf("Shuffled the queue."))
                                 commandJob.complete()
@@ -1702,79 +1736,10 @@ class ChatReader(
                             commandString.contains("^${cmdList.commandList["queue-skip"]}$".toRegex()) -> {
                                 voteSkipUsers.clear()
                                 songQueue.skipSong()
+                                commandRunner.runCommand("pkill mpv", ignoreOutput = true)
+                                printToChat(listOf("Skipping current track."))
                                 commandJob.complete()
                                 return Pair(true, null)
-                            }
-                            // queue-voteskip command
-                            commandString.contains("^${cmdList.commandList["queue-voteskip"]}$".toRegex()) -> {
-                                val userList = ArrayList<String>()
-                                // get channel list
-                                val channelList =
-                                    client.getChannelList().map {
-                                        Pair(
-                                            it.substringAfter("channel_name=").substringBefore(" "),
-                                            it.substringAfter("cid=").substringBefore(" "),
-                                        )
-                                    }
-
-                                // get users in current channel
-                                for (channel in channelList) {
-                                    if (channel.first == botSettings.channelName.substringAfterLast("/")) {
-                                        val tsUserListData = client.getClientList()
-                                        for (line in tsUserListData) {
-                                            if (line.contains("clid=".toRegex())) {
-                                                val clientDataList = line.split("\\|".toRegex())
-                                                for (data in clientDataList) {
-                                                    if (data.split(" ".toRegex())[1].split("=".toRegex())[1] == channel.second) {
-                                                        userList.add(data.split(" ".toRegex())[3].split("=".toRegex())[1])
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        break
-                                    }
-                                }
-
-                                // update voteskip users list
-                                val currentList = voteSkipUsers.toList()
-                                val newList = ArrayList<Pair<String, Boolean>>()
-                                voteSkipUsers.clear()
-                                for (user in userList) {
-                                    if (user != botSettings.nickname) {
-                                        for (voteSkipUser in currentList) {
-                                            if (user == voteSkipUser.first) {
-                                                if (latestMsgUsername == user) {
-                                                    newList.add(Pair(user, true))
-                                                } else {
-                                                    newList.add(Pair(user, voteSkipUser.second))
-                                                }
-                                            }
-                                        }
-                                        if (currentList.isEmpty()) {
-                                            newList.add(Pair(user, latestMsgUsername == user))
-                                        }
-                                    }
-                                }
-                                voteSkipUsers.addAll(newList)
-                                val currentSong = songQueue.nowPlaying()
-                                if (voteSkipUsers.any { !it.second }) {
-                                    printToChat(
-                                        listOf("\nAll users have not voted yet.\nWaiting for more votes..."),
-                                    )
-                                    commandJob.complete()
-                                    return Pair(false, currentSong)
-                                } else {
-                                    printToChat(listOf("Skipping current song."))
-                                    voteSkipUsers.clear()
-                                    songQueue.skipSong()
-                                    commandListener.onCommandExecuted(
-                                        commandString,
-                                        "Skipping current song",
-                                        currentSong,
-                                    )
-                                    commandJob.complete()
-                                    return Pair(true, currentSong)
-                                }
                             }
                             // queue-move command
                             commandString.contains("^${cmdList.commandList["queue-move"]}".toRegex()) -> {
@@ -2020,6 +1985,7 @@ class ChatReader(
                             // queue-stop command
                             commandString.contains("^${cmdList.commandList["queue-stop"]}$".toRegex()) -> {
                                 songQueue.stopQueue()
+                                commandRunner.runCommand("pkill mpv", ignoreOutput = true)
                                 printToChat(listOf("Stopped the queue."))
                                 commandJob.complete()
                                 return Pair(true, null)
@@ -2056,38 +2022,13 @@ class ChatReader(
                                 commandJob.complete()
                                 return Pair(stateKnown, state)
                             }
-                            // queue-nowplaying command
-                            commandString.contains("^${cmdList.commandList["queue-nowplaying"]}$".toRegex()) -> {
+                            // queue-nowplaying & nowplaying command
+                            commandString.contains("^(${cmdList.commandList["queue-nowplaying"]}|${cmdList.commandList["nowplaying"]})$".toRegex()) -> {
                                 val currentTrack = songQueue.nowPlaying()
                                 if (currentTrack.title.name.isNotEmpty()) {
-                                    val messageLines = StringBuilder()
-                                    messageLines.appendLine("Now playing:")
-                                    if (currentTrack.album.name.name
-                                            .isNotEmpty()
-                                    ) {
-                                        messageLines.appendLine("Album Name:  \t${currentTrack.album.name}")
-                                    }
-                                    if (currentTrack.album.link.link
-                                            .isNotEmpty()
-                                    ) {
-                                        messageLines.appendLine("Album Link:  \t\t${currentTrack.album.link}")
-                                    }
-                                    if (currentTrack.link.link.contains("(youtu\\.?be|soundcloud)".toRegex())) {
-                                        messageLines.appendLine("Upload Date:   \t${currentTrack.album.releaseDate.date}")
-                                    } else {
-                                        messageLines.appendLine("Release:     \t\t\t${currentTrack.album.releaseDate.date}")
-                                    }
-
-                                    if (currentTrack.artists.artists.isNotEmpty()) {
-                                        if (currentTrack.link.link.contains("(youtu\\.?be|soundcloud\\.com)".toRegex())) {
-                                            messageLines.appendLine("Uploader: \t\t\t${currentTrack.artists.artists[0].name}")
-                                        } else {
-                                            messageLines.appendLine("Artists:\n${currentTrack.artists}")
-                                        }
-                                    }
-                                    messageLines.appendLine("Track Title:   \t\t${currentTrack.title}")
-                                    messageLines.appendLine("Track Link:    \t\t${currentTrack.link}")
-                                    printToChat(listOf(messageLines.toString()))
+                                    val nowPlaying = "Now playing: ${currentTrack.title} : ${currentTrack.link}"
+                                    printToChat(listOf(nowPlaying))
+                                    commandListener.onCommandExecuted(commandString, nowPlaying, currentTrack)
                                 } else {
                                     printToChat(listOf("No song playing!"))
                                 }
@@ -2097,12 +2038,14 @@ class ChatReader(
                             // queue-pause command
                             commandString.contains("^${cmdList.commandList["queue-pause"]}$".toRegex()) -> {
                                 songQueue.pausePlayback()
+                                printToChat(listOf("Paused playback."))
                                 commandJob.complete()
                                 return Pair(true, null)
                             }
                             // queue-resume command
                             commandString.contains("^${cmdList.commandList["queue-resume"]}$".toRegex()) -> {
                                 songQueue.resumePlayback()
+                                printToChat(listOf("Resumed playback."))
                                 commandJob.complete()
                                 return Pair(true, null)
                             }
@@ -2121,7 +2064,48 @@ class ChatReader(
                                         1
                                     }
                                 val tracks = List(amount) { songQueue.nowPlaying().link.link }.joinToString(",")
+                                printToChat(listOf("Repeating the current song $amount time(s)."))
                                 executeCommand("${cmdList.commandList["queue-playnext"]} $tracks")
+                            }
+                            // loop command
+                            commandString.contains("^${cmdList.commandList["loop"]}$".toRegex()) -> {
+                                val mode = songQueue.toggleTrackLoop()
+                                val msg = if (mode == SongQueue.LoopMode.TRACK) {
+                                    "Looping current track is now enabled."
+                                } else {
+                                    "Looping is now disabled."
+                                }
+                                printToChat(listOf(msg))
+                                commandJob.complete()
+                                return Pair(true, mode)
+                            }
+                            // loopqueue command
+                            commandString.contains("^${cmdList.commandList["loopqueue"]}$".toRegex()) -> {
+                                val mode = songQueue.toggleQueueLoop()
+                                val msg = if (mode == SongQueue.LoopMode.QUEUE) {
+                                    "Looping the entire queue is now enabled."
+                                } else {
+                                    "Looping is now disabled."
+                                }
+                                printToChat(listOf(msg))
+                                commandJob.complete()
+                                return Pair(true, mode)
+                            }
+                            // loopoff command
+                            commandString.contains("^${cmdList.commandList["loopoff"]}$".toRegex()) -> {
+                                val mode = songQueue.setLoopMode(SongQueue.LoopMode.OFF)
+                                val msg = "Looping is now disabled."
+                                printToChat(listOf(msg))
+                                commandJob.complete()
+                                return Pair(true, mode)
+                            }
+                            // loopstatus command
+                            commandString.contains("^${cmdList.commandList["loopstatus"]}$".toRegex()) -> {
+                                val mode = songQueue.getLoopMode()
+                                val msg = "Current loop status: ${mode.name.lowercase()}."
+                                printToChat(listOf(msg))
+                                commandJob.complete()
+                                return Pair(true, mode)
                             }
                             // search command
                             commandString.contains("^${cmdList.commandList["search"]}\\s+".toRegex()) -> {
@@ -2325,327 +2309,74 @@ class ChatReader(
                             commandString.contains("^${cmdList.commandList["return"]}".toRegex()) -> {
                                 client.joinChannel()
                             }
-                            // sp-pause command
-                            commandString.contains("^${cmdList.commandList["sp-pause"]}$".toRegex()) -> {
-                                playerctl(botSettings.spotifyPlayer, "pause")
-                                delay(1.seconds)
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-resume & sp-play command
-                            commandString.contains(
-                                "^(${cmdList.commandList["sp-resume"]}|${cmdList.commandList["sp-play"]})$".toRegex(),
-                            ) -> {
-                                playerctl(botSettings.spotifyPlayer, "play")
-                                delay(1.seconds)
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-stop command
-                            // Stop spotify playback
-                            commandString.contains("^${cmdList.commandList["sp-stop"]}$".toRegex()) -> {
-                                when (val player = botSettings.spotifyPlayer) {
-                                    "ncspot", "spotify_player" -> {
-                                        playerctl(player, "stop")
-                                        commandRunner.runCommand("tmux kill-session -t $player")
-                                    }
-
-                                    "spotify" -> {
-                                        commandRunner.runCommand("pkill -9 $player")
-                                    }
-
-                                    else -> {
-                                        playerctl(player, "stop")
-                                    }
-                                }
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-skip & sp-next command
-                            commandString.contains(
-                                "^(${cmdList.commandList["sp-skip"]}|${cmdList.commandList["sp-next"]})$".toRegex(),
-                            ) -> {
-                                playerctl(botSettings.spotifyPlayer, "next")
-                                delay(1.seconds)
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-prev command
-                            commandString.contains("^${cmdList.commandList["sp-prev"]}$".toRegex()) -> {
-                                playerctl(botSettings.spotifyPlayer, "previous")
-                                delay(100.milliseconds)
-                                playerctl(botSettings.spotifyPlayer, "previous")
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-playsong command
-                            // Play Spotify song based on link or URI
-                            commandString.contains("^${cmdList.commandList["sp-playsong"]}\\s+".toRegex()) -> {
-                                if (message
-                                        .substringAfter("${cmdList.commandList["sp-playsong"]}")
-                                        .isNotEmpty()
-                                ) {
-                                    startSpotifyPlayer()
-                                    println("Playing song...")
-                                    playerctl(
-                                        botSettings.spotifyPlayer,
-                                        "open",
-                                        "spotify:track:" +
-                                            if (
-                                                Link(
-                                                    removeTags(commandString.substringAfter("${cmdList.commandList["sp-playsong"]} ")),
-                                                ).link
-                                                    .startsWith("https://open.spotify.com/track")
-                                            ) {
-                                                removeTags(message)
-                                                    .substringAfterLast("/")
-                                                    .substringBefore("?")
-                                            } else {
-                                                message
-                                                    .split(" ".toRegex())[1]
-                                                    .split("track:".toRegex())[1]
-                                            },
-                                    )
+                            // volume & volume-short command
+                            commandString.contains("^(${cmdList.commandList["volume"]}|${cmdList.commandList["volume-short"]})(\\s+\\d+)?$".toRegex()) -> {
+                                val arg = commandString.replace("^(${cmdList.commandList["volume"]}|${cmdList.commandList["volume-short"]})".toRegex(), "").trim()
+                                if (arg.isEmpty()) {
+                                    val currentVol = botSettings.ytVolume
+                                    printToChat(listOf("Current volume: $currentVol%"))
                                     commandJob.complete()
-                                    return Pair(true, null)
+                                    return Pair(true, currentVol)
                                 } else {
-                                    printToChat(listOf("Error! Please provide a song to play!"))
-                                    commandJob.complete()
-                                    return Pair(false, null)
-                                }
-                            }
-                            // sp-playlist command
-                            // Play Spotify playlist based on link or URI
-                            commandString.contains("^${cmdList.commandList["sp-playlist"]}\\s+".toRegex()) -> {
-                                startSpotifyPlayer()
-                                playerctl(
-                                    botSettings.spotifyPlayer,
-                                    "open",
-                                    "spotify:" +
-                                        if (message.split(" ".toRegex())[1].startsWith("spotify:user:") &&
-                                            message.split(" ".toRegex())[1].contains(":playlist:")
-                                        ) {
-                                            "user:${message.split(" ".toRegex())[1].split(":".toRegex())[2]}" +
-                                                ":playlist:${message.split(":".toRegex()).last()}"
-                                        } else if (message.split(" ".toRegex())[1].startsWith("spotify:playlist")) {
-                                            "playlist:${message.substringAfter("playlist:")}"
-                                        } else if (removeTags(message.substringAfter(" ")).startsWith("https://open.spotify.com/")) {
-                                            "playlist:${
-                                                removeTags(message).substringAfter("playlist/").substringBefore("?")
-                                            }"
-                                        } else {
-                                            ""
-                                        },
-                                )
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-playalbum command
-                            commandString.contains("^${cmdList.commandList["sp-playalbum"]}\\s+".toRegex()) -> {
-                                startSpotifyPlayer()
-                                playerctl(
-                                    botSettings.spotifyPlayer,
-                                    "open",
-                                    "spotify:album:" +
-                                        if (message.split(" ".toRegex())[1].startsWith("spotify:album")) {
-                                            message.substringAfter("album:")
-                                        } else if (removeTags(message.substringAfter(" ")).startsWith("https://open.spotify.com/")) {
-                                            removeTags(message).substringAfter("album/").substringBefore("?")
-                                        } else {
-                                            ""
-                                        },
-                                )
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sp-nowplaying command
-                            commandString.contains("^${cmdList.commandList["sp-nowplaying"]}$".toRegex()) -> {
-                                val lines = StringBuilder()
-                                lines.appendLine("Now playing on Spotify:")
-                                val nowPlaying =
-                                    playerctl(botSettings.spotifyPlayer, "metadata")
-                                        .outputText
-                                        .lines()
-                                for (line in nowPlaying) {
-                                    when (line.substringAfter("xesam:").split("\\s+".toRegex())[0]) {
-                                        "album" ->
-                                            lines.appendLine(
-                                                "Album:\t${
-                                                    line.substringAfter(
-                                                        line
-                                                            .substringAfter("xesam:")
-                                                            .split("\\s+".toRegex())[0],
-                                                    )
-                                                }",
-                                            )
-
-                                        "artist" ->
-                                            lines.appendLine(
-                                                "Artist:   \t${
-                                                    line.substringAfter(
-                                                        line
-                                                            .substringAfter("xesam:")
-                                                            .split("\\s+".toRegex())[0],
-                                                    )
-                                                }",
-                                            )
-
-                                        "title" ->
-                                            lines.appendLine(
-                                                "Title:    \t${
-                                                    line.substringAfter(
-                                                        line
-                                                            .substringAfter("xesam:")
-                                                            .split("\\s+".toRegex())[0],
-                                                    )
-                                                }",
-                                            )
-
-                                        "url" ->
-                                            lines.appendLine(
-                                                "Link:  \t${
-                                                    line.substringAfter(
-                                                        line
-                                                            .substringAfter("xesam:")
-                                                            .split("\\s+".toRegex())[0],
-                                                    )
-                                                }",
-                                            )
+                                    val newVol = arg.toIntOrNull()
+                                    if (newVol != null && newVol in 0..150) {
+                                        botSettings.ytVolume = newVol
+                                        botSettings.scVolume = newVol
+                                        botSettings.bcVolume = newVol
+                                        setPulseAudioVolume(newVol)
+                                        playerctl("mpv", "volume", (newVol / 100.0).toString())
+                                        printToChat(listOf("Volume set to $newVol%"))
+                                        commandJob.complete()
+                                        return Pair(true, newVol)
+                                    } else {
+                                        val errorMsg = "Invalid volume value. Please specify a value between 0 and 150."
+                                        printToChat(listOf(errorMsg))
+                                        commandJob.complete()
+                                        return Pair(false, errorMsg)
                                     }
                                 }
-                                printToChat(listOf(lines.toString()))
+                            }
+                            // volumeup & volume-up-short command
+                            commandString.contains("^(${cmdList.commandList["volumeup"]}|${cmdList.commandList["volume-up-short"]})$".toRegex()) -> {
+                                val currentVol = botSettings.ytVolume
+                                val newVol = (currentVol + 10).coerceAtMost(150)
+                                botSettings.ytVolume = newVol
+                                botSettings.scVolume = newVol
+                                botSettings.bcVolume = newVol
+                                setPulseAudioVolume(newVol)
+                                playerctl("mpv", "volume", (newVol / 100.0).toString())
+                                printToChat(listOf("Volume increased to $newVol%"))
                                 commandJob.complete()
-                                return Pair(true, lines)
+                                return Pair(true, newVol)
                             }
-                            // yt-pause command
-                            commandString.contains("^${cmdList.commandList["yt-pause"]}$".toRegex()) -> {
-                                playerctl("mpv", "pause")
+                            // volumedown & volume-down-short command
+                            commandString.contains("^(${cmdList.commandList["volumedown"]}|${cmdList.commandList["volume-down-short"]})$".toRegex()) -> {
+                                val currentVol = botSettings.ytVolume
+                                val newVol = (currentVol - 10).coerceAtLeast(0)
+                                botSettings.ytVolume = newVol
+                                botSettings.scVolume = newVol
+                                botSettings.bcVolume = newVol
+                                setPulseAudioVolume(newVol)
+                                playerctl("mpv", "volume", (newVol / 100.0).toString())
+                                printToChat(listOf("Volume decreased to $newVol%"))
                                 commandJob.complete()
-                                return Pair(true, null)
+                                return Pair(true, newVol)
                             }
-                            // yt-resume and yt-play commands
-                            commandString.contains(
-                                "^(${cmdList.commandList["yt-resume"]}|${cmdList.commandList["yt-play"]})$".toRegex(),
-                            ) -> {
-                                playerctl("mpv", "play")
+                            // mute command
+                            commandString.contains("^${cmdList.commandList["mute"]}$".toRegex()) -> {
+                                val currentVol = botSettings.ytVolume
+                                val newVol = if (currentVol > 0) 0 else 50
+                                botSettings.ytVolume = newVol
+                                botSettings.scVolume = newVol
+                                botSettings.bcVolume = newVol
+                                setPulseAudioVolume(newVol)
+                                playerctl("mpv", "volume", (newVol / 100.0).toString())
+                                val msg = if (newVol == 0) "Muted playback." else "Unmuted playback. Volume set to 50%."
+                                printToChat(listOf(msg))
                                 commandJob.complete()
-                                return Pair(true, null)
+                                return Pair(true, newVol)
                             }
-                            // yt-stop command
-                            commandString.contains("^${cmdList.commandList["yt-stop"]}$".toRegex()) -> {
-                                playerctl("mpv", "stop")
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // yt-playsong command
-                            commandString.contains("^${cmdList.commandList["yt-playsong"]}\\s+".toRegex()) -> {
-                                val ytLink = Link(removeTags(message.substringAfter(" ")))
-                                if (ytLink.link.isNotEmpty()) {
-                                    launch {
-                                        commandRunner.runCommand(
-                                            "mpv --terminal=no --no-video" +
-                                                " --ytdl-raw-options=extract-audio=,audio-format=best,audio-quality=0," +
-                                                "cookies=youtube-dl.cookies,force-ipv4=,age-limit=21,geo-bypass=" +
-                                                " --ytdl \"$ytLink\" --volume=${botSettings.ytVolume}",
-                                            inheritIO = true,
-                                            ignoreOutput = true,
-                                            printCommand = true,
-                                        )
-                                    }
-                                    commandListener.onCommandExecuted(commandString, "Playing song", ytLink)
-                                    commandJob.complete()
-                                    return Pair(true, ytLink)
-                                } else {
-                                    commandListener.onCommandExecuted(commandString, "Couldn't play song", ytLink)
-                                    commandJob.complete()
-                                    return Pair(false, ytLink)
-                                }
-                            }
-                            // yt-nowplaying command
-                            commandString.contains("^${cmdList.commandList["yt-nowplaying"]}$".toRegex()) -> {
-                                val metadata = playerctl("mpv", "metadata")
-                                if (metadata.errorText.isEmpty()) {
-                                    val nowPlaying =
-                                        youTube.fetchVideo(
-                                            Link(
-                                                metadata.outputText
-                                                    .lines()
-                                                    .first { it.contains("xesam:url") }
-                                                    .replace("(^.+\\s+\"?|\"?$)".toRegex(), ""),
-                                            ),
-                                        )
-                                    printToChat(listOf("Now playing from YouTube:\n$nowPlaying"))
-                                    commandJob.complete()
-                                    return Pair(true, nowPlaying)
-                                } else {
-                                    println("Failed to fetch metadata!\n${metadata.errorText}")
-                                    commandJob.complete()
-                                    return Pair(true, metadata.errorText)
-                                }
-                            }
-                            // sc-pause command
-                            commandString.contains("^${cmdList.commandList["sc-pause"]}$".toRegex()) -> {
-                                playerctl("mpv", "pause")
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sc-resume and sc-play commands
-                            commandString.contains(
-                                "^(${cmdList.commandList["sc-resume"]}|${cmdList.commandList["sc-play"]})$".toRegex(),
-                            ) -> {
-                                playerctl("mpv", "play")
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sc-stop command
-                            commandString.contains("^${cmdList.commandList["sc-stop"]}$".toRegex()) -> {
-                                playerctl("mpv", "stop")
-                                commandJob.complete()
-                                return Pair(true, null)
-                            }
-                            // sc-playsong command
-                            commandString.contains("^${cmdList.commandList["sc-playsong"]}\\s+".toRegex()) -> {
-                                val scLink = Link(removeTags(message.substringAfter(" ")))
-                                if (scLink.link.isNotEmpty()) {
-                                    launch {
-                                        commandRunner.runCommand(
-                                            "mpv --terminal=no --no-video --ytdl \"$scLink\" --volume=${botSettings.scVolume}",
-                                            inheritIO = true,
-                                            ignoreOutput = true,
-                                            printCommand = true,
-                                        )
-                                    }
-                                    commandListener.onCommandExecuted(commandString, "Playing song", scLink)
-                                    commandJob.complete()
-                                    return Pair(true, scLink)
-                                } else {
-                                    commandListener.onCommandExecuted(commandString, "Couldn't play song", scLink)
-                                    commandJob.complete()
-                                    return Pair(false, scLink)
-                                }
-                            }
-                            // sc-nowplaying command
-                            commandString.contains("^${cmdList.commandList["sc-nowplaying"]}$".toRegex()) -> {
-                                val metadata = playerctl("mpv", "metadata")
-                                if (metadata.errorText.isEmpty()) {
-                                    val nowPlaying =
-                                        youTube.fetchVideo(
-                                            Link(
-                                                metadata.outputText
-                                                    .lines()
-                                                    .first { it.contains("xesam:url") }
-                                                    .replace("(^.+\\s+\"?|\"?$)".toRegex(), ""),
-                                            ),
-                                        )
-                                    printToChat(listOf("Now playing from SoundCloud:\n$nowPlaying"))
-                                    commandJob.complete()
-                                    return Pair(true, nowPlaying)
-                                } else {
-                                    println("Failed to fetch metadata!\n${metadata.errorText}")
-                                    commandJob.complete()
-                                    return Pair(true, metadata.errorText)
-                                }
-                            }
+
 
                             else -> {
                                 commandJob.complete()
@@ -2783,6 +2514,37 @@ class ChatReader(
     override fun onAdPlaying() {
         latestMsgUsername = "__song_queue__"
         printToChat(listOf("\nAd playing."))
+    }
+
+    private fun setPulseAudioVolume(volumePercent: Int) {
+        val commandRunner = CommandRunner()
+        try {
+            val defaultSinkName = commandRunner.runCommand(
+                "pacmd list-sinks | grep -e 'index:' -e 'name:' | grep -A 1 -E '\\s+\\*\\s+index:' | grep 'name'",
+                printCommand = false,
+                printOutput = false,
+            ).outputText.replace("(^\\s*name:\\s*<|>.*$)".toRegex(), "").trim()
+            
+            if (defaultSinkName.isNotEmpty()) {
+                println("Setting default sink ($defaultSinkName) volume to $volumePercent%")
+                commandRunner.runCommand("pactl set-sink-volume $defaultSinkName $volumePercent%", ignoreOutput = true, printCommand = false)
+            } else {
+                println("Default sink name not found, falling back to @DEFAULT_SINK@")
+                commandRunner.runCommand("pactl set-sink-volume @DEFAULT_SINK@ $volumePercent%", ignoreOutput = true, printCommand = false)
+            }
+            
+            val sinkInputsOutput = commandRunner.runCommand("pactl list short sink-inputs", printOutput = false).outputText
+            val ids = sinkInputsOutput.lines()
+                .map { it.substringBefore("\t").trim() }
+                .filter { it.isNotEmpty() && it.all { char -> char.isDigit() } }
+            
+            for (id in ids) {
+                println("Setting sink-input $id volume to $volumePercent%")
+                commandRunner.runCommand("pactl set-sink-input-volume $id $volumePercent%", ignoreOutput = true, printCommand = false)
+            }
+        } catch (e: Exception) {
+            println("Error in setPulseAudioVolume: ${e.message}")
+        }
     }
 }
 

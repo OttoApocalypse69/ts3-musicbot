@@ -22,4 +22,12 @@ class BotSettings(
     var spApiKey: String = "",
     var spClientId: String = "",
     var spClientSecret: String = "",
+    var musicPermissionNicknames: String = "",
+    var musicPermissionServerGroups: String = "",
+    var musicPermissionChannelGroups: String = "",
+    var adminPermissionNicknames: String = "",
+    var adminPermissionServerGroups: String = "",
+    var adminPermissionChannelGroups: String = "",
+    var ownerNicknames: String = "",
+    var commandCooldownSeconds: Int = 3,
 )

@@ -73,28 +73,198 @@ if (-not (Test-Path $envTemplateFile)) {
     Write-Error "Missing template environment file: .env.example"
 }
 
+function Get-EnvValue {
+    param(
+        [string[]]$Lines,
+        [string]$Key,
+        [string]$DefaultValue = ""
+    )
+
+    $pattern = "^\s*#?\s*" + [regex]::Escape($Key) + "\s*=(.*)$"
+    foreach ($line in $Lines) {
+        if ($line -match $pattern) {
+            return $Matches[1].Trim()
+        }
+    }
+    return $DefaultValue
+}
+
+function Set-EnvValue {
+    param(
+        [string[]]$Lines,
+        [string]$Key,
+        [string]$Value
+    )
+
+    $pattern = "^\s*#?\s*" + [regex]::Escape($Key) + "\s*="
+    $result = New-Object System.Collections.Generic.List[string]
+    $found = $false
+
+    foreach ($line in $Lines) {
+        if ($line -match $pattern) {
+            $result.Add("$Key=$Value")
+            $found = $true
+        } else {
+            $result.Add($line)
+        }
+    }
+
+    if (-not $found) {
+        $result.Add("$Key=$Value")
+    }
+
+    return $result.ToArray()
+}
+
+function Read-ConfigValue {
+    param(
+        [string]$Prompt,
+        [string]$CurrentValue
+    )
+
+    $displayValue = $CurrentValue
+    if ([string]::IsNullOrWhiteSpace($displayValue)) {
+        $displayValue = "<blank>"
+    }
+
+    $value = Read-Host "$Prompt [$displayValue]"
+    if ($value -eq "") {
+        return $CurrentValue
+    }
+
+    return $value.Trim()
+}
+
+function Convert-SecureStringToPlainText {
+    param([System.Security.SecureString]$SecureString)
+
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    }
+    finally {
+        if ($bstr -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+}
+
+function Read-SecretValue {
+    param(
+        [string]$Prompt,
+        [string]$CurrentValue
+    )
+
+    $displayValue = "<blank>"
+    if (-not [string]::IsNullOrWhiteSpace($CurrentValue)) {
+        $displayValue = "configured, press Enter to keep or type clear to remove"
+    }
+
+    $secureValue = Read-Host "$Prompt [$displayValue]" -AsSecureString
+    $value = Convert-SecureStringToPlainText $secureValue
+
+    if ($value -eq "") {
+        return $CurrentValue
+    }
+    if ($value -ieq "clear") {
+        return ""
+    }
+
+    return $value
+}
+
+function Split-ServerAddress {
+    param(
+        [string]$ServerInput,
+        [string]$FallbackPort
+    )
+
+    $serverAddress = ""
+    if (-not [string]::IsNullOrWhiteSpace($ServerInput)) {
+        $serverAddress = $ServerInput.Trim()
+    }
+
+    $serverPort = "9987"
+    if (-not [string]::IsNullOrWhiteSpace($FallbackPort)) {
+        $serverPort = $FallbackPort.Trim()
+    }
+
+    if ($serverAddress -match "^\[(.+)\]:(\d+)$") {
+        $serverAddress = $Matches[1]
+        $serverPort = $Matches[2]
+    } elseif ($serverAddress -match "^([^:]+):(\d+)$") {
+        $serverAddress = $Matches[1]
+        $serverPort = $Matches[2]
+    }
+
+    return @{
+        Address = $serverAddress
+        Port = $serverPort
+    }
+}
+
+$createdEnvFile = $false
 if (-not (Test-Path $envFile)) {
     Write-Host "Creating '.env' file from '.env.example'..." -ForegroundColor Gray
     Copy-Item $envTemplateFile $envFile
-    
-    # Prompt the user for basic configurations to get started quickly
-    Write-Host "`n--- Quick Configuration ---" -ForegroundColor Cyan
-    $server = Read-Host "Enter TeamSpeak Server Address (e.g., ts.example.com)"
-    $nickname = Read-Host "Enter Bot Nickname [MusicBot]"
-    $channel = Read-Host "Enter Target Channel Name"
-    
-    if ([string]::IsNullOrWhiteSpace($nickname)) { $nickname = "MusicBot" }
-    
-    # Replace the values in the .env file
-    $envContent = Get-Content $envFile
-    $envContent = $envContent -replace 'TS3_SERVER_ADDRESS=.*', "TS3_SERVER_ADDRESS=$server"
-    $envContent = $envContent -replace 'TS3_NICKNAME=.*', "TS3_NICKNAME=$nickname"
-    $envContent = $envContent -replace 'TS3_CHANNEL_NAME=.*', "TS3_CHANNEL_NAME=$channel"
-    $envContent | Set-Content $envFile
-    
-    Write-Host "$checkmark .env file initialized with your quick settings." -ForegroundColor Green
+    $createdEnvFile = $true
+}
+
+$runSetupWizard = $createdEnvFile
+if (-not $createdEnvFile) {
+    Write-Host "$checkmark Existing '.env' file detected." -ForegroundColor Green
+    $setupChoice = Read-Host "Update bot nickname, server address, passwords, and channel now? (Y/n)"
+    $runSetupWizard = [string]::IsNullOrWhiteSpace($setupChoice) -or $setupChoice -eq "Y" -or $setupChoice -eq "y"
+}
+
+if ($runSetupWizard) {
+    $envContent = @(Get-Content $envFile)
+
+    $existingNickname = Get-EnvValue $envContent "TS3_NICKNAME" "MusicBot"
+    $existingServerAddress = Get-EnvValue $envContent "TS3_SERVER_ADDRESS" "your.teamspeak-server.com"
+    $existingServerPort = Get-EnvValue $envContent "TS3_SERVER_PORT" "9987"
+    $existingServerPassword = Get-EnvValue $envContent "TS3_SERVER_PASSWORD" ""
+    $existingChannelName = Get-EnvValue $envContent "TS3_CHANNEL_NAME" "Music Channel"
+    $existingChannelPassword = Get-EnvValue $envContent "TS3_CHANNEL_PASSWORD" ""
+
+    Write-Host "`n--- TeamSpeak Bot Setup ---" -ForegroundColor Cyan
+    Write-Host "Press Enter to keep the value shown in brackets. Leave passwords blank if your server/channel has no password." -ForegroundColor Gray
+    Write-Host "You can enter a server as host:port, for example viscous-salmon.gl.at.ply.gg:53645." -ForegroundColor Gray
+
+    $nickname = Read-ConfigValue "Bot nickname" $existingNickname
+    $serverPromptDefault = $existingServerAddress
+    if (-not [string]::IsNullOrWhiteSpace($existingServerPort)) {
+        $serverPromptDefault = "$existingServerAddress`:$existingServerPort"
+    }
+    $serverInput = Read-ConfigValue "TeamSpeak server address" $serverPromptDefault
+    $serverParts = Split-ServerAddress $serverInput $existingServerPort
+    $serverAddress = $serverParts.Address
+    $serverPort = Read-ConfigValue "TeamSpeak server port" $serverParts.Port
+    $serverPassword = Read-SecretValue "TeamSpeak server password" $existingServerPassword
+    $channelName = Read-ConfigValue "TeamSpeak channel name" $existingChannelName
+    $channelPassword = Read-SecretValue "TeamSpeak channel password" $existingChannelPassword
+
+    $envContent = Set-EnvValue $envContent "TS3_NICKNAME" $nickname
+    $envContent = Set-EnvValue $envContent "TS3_SERVER_ADDRESS" $serverAddress
+    $envContent = Set-EnvValue $envContent "TS3_SERVER_PORT" $serverPort
+    $envContent = Set-EnvValue $envContent "TS3_SERVER_PASSWORD" $serverPassword
+    $envContent = Set-EnvValue $envContent "TS3_CHANNEL_NAME" $channelName
+    $envContent = Set-EnvValue $envContent "TS3_CHANNEL_PASSWORD" $channelPassword
+    $envContent = Set-EnvValue $envContent "TS3_ACCEPT_TS_LICENSE" "true"
+    $envContent = Set-EnvValue $envContent "TS3_USE_OFFICIAL_TSCLIENT" "true"
+    $envContent = Set-EnvValue $envContent "TS3_SPOTIFY_PLAYER" "disabled"
+    $envContent = Set-EnvValue $envContent "TS3_COMMAND_PREFIX" "!"
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
+    [System.IO.File]::WriteAllLines($envFile, [string[]]$envContent, $utf8NoBom)
+
+    if ([string]::IsNullOrWhiteSpace($serverAddress) -or $serverAddress -eq "your.teamspeak-server.com") {
+        Write-Host "Warning: TS3_SERVER_ADDRESS still looks like a placeholder. Edit .env before starting the bot." -ForegroundColor Yellow
+    }
+
+    Write-Host "$checkmark .env file saved with your TeamSpeak setup." -ForegroundColor Green
 } else {
-    Write-Host "$checkmark Existing '.env' file detected. Skipping quick config. (Modify manually if needed)" -ForegroundColor Green
+    Write-Host "$checkmark Keeping existing '.env' settings." -ForegroundColor Green
 }
 
 # 3. Build the Docker Image

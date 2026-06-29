@@ -3,28 +3,58 @@ set -e
 
 # ==============================================================================
 # Entrypoint script for TS3 Music Bot Docker Container
-# Starts D-Bus and PulseAudio virtual sound servers, generates the config file
-# from environment variables, and launches the Java application.
+# Starts D-Bus and PulseAudio with the ts3bot user environment, generates config
+# files from environment variables, and launches the Java application wrapper.
 # ==============================================================================
 
-# Fix ownership of the home directory (handles Windows volume mount permission issues)
-echo "Fixing home directory permissions..."
-chown -R ts3bot:ts3bot /home/ts3bot
+TS3_USER="ts3bot"
+TS3_HOME="/home/${TS3_USER}"
+export HOME="$TS3_HOME"
+export USER="$TS3_USER"
+export LOGNAME="$TS3_USER"
+export XDG_CONFIG_HOME="${TS3_HOME}/.config"
+export XDG_CACHE_HOME="${TS3_HOME}/.cache"
+export XDG_STATE_HOME="${TS3_HOME}/.local/state"
+export XDG_RUNTIME_DIR="/tmp/runtime-${TS3_USER}"
 
-# Ensure dbus session bus is started as ts3bot and environment variable is exported
-if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+as_ts3bot() {
+    runuser -u "$TS3_USER" -- env \
+        HOME="$HOME" \
+        USER="$USER" \
+        LOGNAME="$LOGNAME" \
+        XDG_CONFIG_HOME="$XDG_CONFIG_HOME" \
+        XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+        XDG_STATE_HOME="$XDG_STATE_HOME" \
+        XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+        DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
+        DBUS_SESSION_BUS_PID="${DBUS_SESSION_BUS_PID:-}" \
+        "$@"
+}
+
+echo "Preparing ${TS3_USER} runtime directories..."
+mkdir -p \
+    "$XDG_CONFIG_HOME/pulse" \
+    "$XDG_CACHE_HOME" \
+    "$XDG_STATE_HOME" \
+    "$XDG_RUNTIME_DIR" \
+    "$TS3_HOME/.ts3client"
+chmod 700 "$XDG_RUNTIME_DIR"
+chown -R "$TS3_USER:$TS3_USER" \
+    "$TS3_HOME" \
+    "$XDG_RUNTIME_DIR"
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
     echo "Starting D-Bus session bus..."
-    # Launch dbus-launch as ts3bot and evaluate the output in the current environment
-    eval $(su -p -s /bin/bash -c "dbus-launch --sh-syntax" ts3bot)
+    eval "$(as_ts3bot dbus-launch --sh-syntax)"
+    export DBUS_SESSION_BUS_ADDRESS
+    export DBUS_SESSION_BUS_PID
 fi
 
-# Ensure PulseAudio is running as ts3bot and virtual devices are initialized
 echo "Starting PulseAudio daemon..."
-su -p -s /bin/bash -c "pulseaudio --start --exit-idle-time=-1 --system=false" ts3bot
+as_ts3bot pulseaudio --start --exit-idle-time=-1 --system=false
 
-# Wait for PulseAudio to start up and register
 for i in {1..10}; do
-    if su -p -s /bin/bash -c "pactl info" ts3bot >/dev/null 2>&1; then
+    if as_ts3bot pactl info >/dev/null 2>&1; then
         echo "PulseAudio is ready."
         break
     fi
@@ -32,13 +62,11 @@ for i in {1..10}; do
     sleep 0.5
 done
 
-# Set PulseAudio default devices (must be run as the user running pulseaudio)
-su -p -s /bin/bash -c "pactl set-default-sink VirtualSink" ts3bot || true
-su -p -s /bin/bash -c "pactl set-default-source VirtualSink.monitor" ts3bot || true
+as_ts3bot pactl set-default-sink VirtualSink || true
+as_ts3bot pactl set-default-source VirtualSink.monitor || true
 
-# Generate the ts3-musicbot.config file dynamically from env variables
-CONFIG_FILE="/home/ts3bot/ts3-musicbot.config"
-COMMAND_CONFIG_FILE="/home/ts3bot/ts3-musicbot.commands"
+CONFIG_FILE="${TS3_HOME}/ts3-musicbot.config"
+COMMAND_CONFIG_FILE="${TS3_HOME}/ts3-musicbot.commands"
 echo "Generating bot configuration at $CONFIG_FILE..."
 
 cat <<EOF > "$CONFIG_FILE"
@@ -64,9 +92,16 @@ YT_API_KEY=${TS3_YT_API_KEY:-}
 SP_API_KEY=${TS3_SP_API_KEY:-}
 SP_CLIENT_ID=${TS3_SP_CLIENT_ID:-}
 SP_CLIENT_SECRET=${TS3_SP_CLIENT_SECRET:-}
+MUSIC_PERMISSION_NICKNAMES=${TS3_MUSIC_PERMISSION_NICKNAMES:-}
+MUSIC_PERMISSION_SERVER_GROUPS=${TS3_MUSIC_PERMISSION_SERVER_GROUPS:-}
+MUSIC_PERMISSION_CHANNEL_GROUPS=${TS3_MUSIC_PERMISSION_CHANNEL_GROUPS:-}
+ADMIN_PERMISSION_NICKNAMES=${TS3_ADMIN_PERMISSION_NICKNAMES:-}
+ADMIN_PERMISSION_SERVER_GROUPS=${TS3_ADMIN_PERMISSION_SERVER_GROUPS:-}
+ADMIN_PERMISSION_CHANNEL_GROUPS=${TS3_ADMIN_PERMISSION_CHANNEL_GROUPS:-}
+OWNER_NICKNAMES=${TS3_OWNER_NICKNAMES:-}
+COMMAND_COOLDOWN_SECONDS=${TS3_COMMAND_COOLDOWN_SECONDS:-3}
 EOF
 
-<<<<<<< HEAD
 echo "Generating command configuration at $COMMAND_CONFIG_FILE..."
 
 cat <<EOF > "$COMMAND_CONFIG_FILE"
@@ -79,28 +114,41 @@ QUEUE_PLAYNEXT=${TS3_QUEUE_PLAYNEXT_COMMAND:-queue-playnext}
 QUEUE_PLAYNOW=${TS3_QUEUE_PLAYNOW_COMMAND:-queue-playnow}
 QUEUE_PLAY=${TS3_QUEUE_PLAY_COMMAND:-queue-play}
 QUEUE_LIST=${TS3_QUEUE_LIST_COMMAND:-queue}
+QUEUE_DELETE=${TS3_QUEUE_DELETE_COMMAND:-queue-delete}
 QUEUE_CLEAR=${TS3_QUEUE_CLEAR_COMMAND:-clear}
 QUEUE_SHUFFLE=${TS3_QUEUE_SHUFFLE_COMMAND:-shuffle}
 QUEUE_SKIP=${TS3_QUEUE_SKIP_COMMAND:-skip}
+QUEUE_MOVE=${TS3_QUEUE_MOVE_COMMAND:-queue-move}
 QUEUE_STOP=${TS3_QUEUE_STOP_COMMAND:-stop}
+QUEUE_STATUS=${TS3_QUEUE_STATUS_COMMAND:-queue-status}
 QUEUE_NOWPLAYING=${TS3_QUEUE_NOWPLAYING_COMMAND:-nowplaying}
 QUEUE_PAUSE=${TS3_QUEUE_PAUSE_COMMAND:-pause}
 QUEUE_RESUME=${TS3_QUEUE_RESUME_COMMAND:-resume}
-LYRICS=${TS3_LYRICS_COMMAND:-lyrics}
+QUEUE_REPEAT=${TS3_QUEUE_REPEAT_COMMAND:-queue-repeat}
+HEALTH=${TS3_HEALTH_COMMAND:-health}
+SEEK=${TS3_SEEK_COMMAND:-seek}
+HISTORY=${TS3_HISTORY_COMMAND:-history}
+REPLAY=${TS3_REPLAY_COMMAND:-replay}
+LOOP=${TS3_LOOP_COMMAND:-loop}
+LOOP_QUEUE=${TS3_LOOP_QUEUE_COMMAND:-loopqueue}
+LOOP_OFF=${TS3_LOOP_OFF_COMMAND:-loopoff}
+LOOP_STATUS=${TS3_LOOP_STATUS_COMMAND:-loopstatus}
+VOLUME=${TS3_VOLUME_COMMAND:-volume}
+VOLUME_SHORT=${TS3_VOLUME_SHORT_COMMAND:-vol}
+VOLUME_UP=${TS3_VOLUME_UP_COMMAND:-volumeup}
+VOLUME_UP_SHORT=${TS3_VOLUME_UP_SHORT_COMMAND:-volup}
+VOLUME_DOWN=${TS3_VOLUME_DOWN_COMMAND:-volumedown}
+VOLUME_DOWN_SHORT=${TS3_VOLUME_DOWN_SHORT_COMMAND:-voldown}
+VOLUME_MUTE=${TS3_VOLUME_MUTE_COMMAND:-mute}
 INFO=${TS3_INFO_COMMAND:-info}
 SEARCH=${TS3_SEARCH_COMMAND:-search}
+GOTO=${TS3_GOTO_COMMAND:-goto}
+RETURN=${TS3_RETURN_COMMAND:-return}
 EOF
 
-# Ensure permissions are correct on the generated config file
-chmod 600 "$CONFIG_FILE"
-chmod 600 "$COMMAND_CONFIG_FILE"
-=======
-# Ensure permissions and ownership are correct on the generated config file
-chmod 600 "$CONFIG_FILE"
-chown ts3bot:ts3bot "$CONFIG_FILE"
->>>>>>> 706c7889e06a7bfe6abb82eac726de593b27ca23
+chmod 600 "$CONFIG_FILE" "$COMMAND_CONFIG_FILE"
+chown "$TS3_USER:$TS3_USER" "$CONFIG_FILE" "$COMMAND_CONFIG_FILE"
 
-# Log connection details (without sensitive passwords)
 echo "--------------------------------------------------"
 echo "Starting TS3 Music Bot..."
 echo "Nickname:      ${TS3_NICKNAME:-MusicBot}"
@@ -110,12 +158,14 @@ echo "Spotify Player: ${TS3_SPOTIFY_PLAYER:-disabled}"
 echo "Command Prefix: ${TS3_COMMAND_PREFIX:-!}"
 echo "--------------------------------------------------"
 
-<<<<<<< HEAD
-# Run the bot via the Web UI Python wrapper
-# Any CLI args passed to docker run will be forwarded
-exec python3 /app/web_ui.py --config "$CONFIG_FILE" --command-config "$COMMAND_CONFIG_FILE" "$@"
-=======
-# Run the bot via the Web UI Python wrapper as the ts3bot user
-# Forward all arguments
-exec su -p -s /bin/bash -c "exec python3 /app/web_ui.py --config \"$CONFIG_FILE\" \"$@\"" ts3bot
->>>>>>> 706c7889e06a7bfe6abb82eac726de593b27ca23
+exec runuser -u "$TS3_USER" -- env \
+    HOME="$HOME" \
+    USER="$USER" \
+    LOGNAME="$LOGNAME" \
+    XDG_CONFIG_HOME="$XDG_CONFIG_HOME" \
+    XDG_CACHE_HOME="$XDG_CACHE_HOME" \
+    XDG_STATE_HOME="$XDG_STATE_HOME" \
+    XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" \
+    DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
+    DBUS_SESSION_BUS_PID="${DBUS_SESSION_BUS_PID:-}" \
+    python3 /app/web_ui.py --config "$CONFIG_FILE" --command-config "$COMMAND_CONFIG_FILE" "$@"

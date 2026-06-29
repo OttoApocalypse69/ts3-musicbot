@@ -55,6 +55,7 @@ data class Track(
     val playability: Playability = Playability(),
     val likes: Likes = Likes(),
     override var description: Description = Description(),
+    val requester: String = "",
 ) : Playable(title, album.releaseDate) {
     override fun toString() =
         "$album\n" +

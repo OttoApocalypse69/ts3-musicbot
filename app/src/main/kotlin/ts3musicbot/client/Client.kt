@@ -60,4 +60,23 @@ open class Client(open val botSettings: BotSettings) {
     open fun getClientList(): List<String> = emptyList()
 
     open fun getChannelList(): List<String> = emptyList()
+
+    open fun getCurrentChannelId(): String = ""
+
+    open fun getCurrentChannelName(): String = ""
+
+    open fun getChannelNameById(channelId: String): String = ""
+
+    open fun getClientChannelId(nickname: String): String? = null
+
+    open fun getClientServerGroupIds(nickname: String): List<String> = emptyList()
+
+    open fun getClientChannelGroupId(nickname: String): String = ""
+
+    open fun getClientUniqueId(nickname: String): String = ""
+
+    open suspend fun joinChannelById(
+        channelId: String,
+        channelPassword: String = "",
+    ): Boolean = false
 }

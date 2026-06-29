@@ -12,46 +12,35 @@ data class CommandList(
             Pair("queue-playnow", "!queue-playnow"),
             Pair("queue-play", "!queue-play"),
             Pair("queue-list", "!queue-list"),
+            Pair("queue-list-short", "!queue"),
             Pair("queue-delete", "!queue-delete"),
             Pair("queue-clear", "!queue-clear"),
             Pair("queue-shuffle", "!queue-shuffle"),
-            Pair("queue-skip", "!queue-skip"),
-            Pair("queue-voteskip", "!queue-voteskip"),
+            Pair("shuffle", "!shuffle"),
+            Pair("queue-skip", "!skip"),
             Pair("queue-move", "!queue-move"),
-            Pair("queue-stop", "!queue-stop"),
+            Pair("queue-stop", "!stop"),
             Pair("queue-status", "!queue-status"),
             Pair("queue-nowplaying", "!queue-nowplaying"),
-            Pair("queue-pause", "!queue-pause"),
-            Pair("queue-resume", "!queue-resume"),
+            Pair("nowplaying", "!nowplaying"),
+            Pair("queue-pause", "!pause"),
+            Pair("queue-resume", "!resume"),
             Pair("queue-repeat", "!queue-repeat"),
-            Pair("lyrics", "!lyrics"),
             Pair("info", "!info"),
             Pair("search", "!search"),
+            Pair("volume", "!volume"),
+            Pair("volume-short", "!vol"),
+            Pair("volumeup", "!volumeup"),
+            Pair("volume-up-short", "!volup"),
+            Pair("volumedown", "!volumedown"),
+            Pair("volume-down-short", "!voldown"),
+            Pair("mute", "!mute"),
+            Pair("loop", "!loop"),
+            Pair("loopqueue", "!loopqueue"),
+            Pair("loopoff", "!loopoff"),
+            Pair("loopstatus", "!loopstatus"),
             Pair("goto", "!goto"),
             Pair("return", "!return"),
-            Pair("sp-pause", "!sp-pause"),
-            Pair("sp-resume", "!sp-resume"),
-            Pair("sp-play", "!sp-play"),
-            Pair("sp-stop", "!sp-stop"),
-            Pair("sp-skip", "!sp-skip"),
-            Pair("sp-next", "!sp-next"),
-            Pair("sp-prev", "!sp-prev"),
-            Pair("sp-playsong", "!sp-playsong"),
-            Pair("sp-playlist", "!sp-playlist"),
-            Pair("sp-playalbum", "!sp-playalbum"),
-            Pair("sp-nowplaying", "!sp-nowplaying"),
-            Pair("yt-pause", "!yt-pause"),
-            Pair("yt-resume", "!yt-resume"),
-            Pair("yt-play", "!yt-play"),
-            Pair("yt-stop", "!yt-stop"),
-            Pair("yt-playsong", "!yt-playsong"),
-            Pair("yt-nowplaying", "!yt-nowplaying"),
-            Pair("sc-pause", "!sc-pause"),
-            Pair("sc-resume", "!sc-resume"),
-            Pair("sc-play", "!sc-play"),
-            Pair("sc-stop", "!sc-stop"),
-            Pair("sc-playsong", "!sc-playsong"),
-            Pair("sc-nowplaying", "!sc-nowplaying"),
         ).toMutableMap(),
 ) {
     var helpMessages = createHelpMessages()
@@ -64,61 +53,35 @@ data class CommandList(
                 "\n" +
                     "General commands:\n" +
                     "${commandList["help"]} <command>                              -Shows this help message. Use ${commandList["help"]} <command> to get more help on a specific command.\n" +
-                    "${commandList["play"]} <query/link>                           -Search for a song without Spotify and start playing it immediately.\n" +
-                    "${commandList["queue-add"]}                                   -Add track(s) to queue by link or directly searching from yt/sp/sc and adding the first match to the queue.\n" +
+                    "${commandList["play"]} <query/link>                           -Search for a song and start playing it immediately.\n" +
+                    "${commandList["queue-add"]}                                   -Add track(s) to queue by link or directly searching and adding the first match to the queue.\n" +
                     "${commandList["queue-playnext"]}                              -Add track/playlist/album etc. to the top of the queue. Add multiple links separated by a comma \",\". Shuffle with the -s option\n" +
                     "${commandList["queue-playnow"]}                               -Add track/playlist/album etc. to the top of the queue and start playing it immediately.\n" +
                     "${commandList["queue-play"]}                                  -Play the song queue\n" +
                     "${commandList["queue-list"]} <--all,--limit>                  -Lists current songs in queue. Add the -a/--all option to show all tracks or -l/--limit to set a limit to the amount of tracks.\n" +
                     "${commandList["queue-delete"]} <link(s)/position(s)>          -Delete song(s) from the queue. If you want to delete multiple tracks, just separate them with a comma \",\". Optionally you can just use a position to delete a track.\n" +
                     "${commandList["queue-clear"]}                                 -Clears the song queue\n" +
-                    "${commandList["queue-shuffle"]}                               -Shuffles the queue\n" +
-                    "${commandList["queue-skip"]}                                  -Skips current song\n" +
-                    "${commandList["queue-voteskip"]}                              -Vote to skip the currently playing track. All users currently listening will also have to run ${commandList["queue-voteskip"]} for the track to be skipped.\n" +
+                    "${commandList["shuffle"]}                                     -Shuffles the queue\n" +
+                    "${commandList["queue-skip"]}                                  -Skips the currently playing song instantly.\n" +
                     "${commandList["queue-move"]} <link> -p <pos>                  -Moves a track to a desired position in the queue. <link> should be your song link and <pos> should be the new position of your song.\n" +
                     "${commandList["queue-stop"]}                                  -Stops the queue\n" +
                     "${commandList["queue-status"]}                                -Returns the status of the song queue\n" +
-                    "${commandList["queue-nowplaying"]}                            -Returns information on the currently playing track\n" +
+                    "${commandList["nowplaying"]}                                  -Returns information on the currently playing track\n" +
                     "${commandList["queue-pause"]}                                 -Pauses playback\n" +
                     "${commandList["queue-resume"]}                                -Resumes playback\n" +
                     "${commandList["queue-repeat"]} <amount>                       -Adds the currently playing song to the top of the queue. <amount> is how many times the song should be queued.\n" +
-                    "${commandList["search"]} <service> <type> <text> <limit>      -Search on SoundCloud, Spotify, YouTube or Bandcamp. Shows 10 first results by default. <type> can be track, video, playlist or channel. You can set the amount of results with the -l/--limit flag.\n" +
-                    "${commandList["info"]} <link/search query>                    -Shows info on the given search query or link(s). <link> can be one or more Spotify, YouTube or SoundCloud links, separated by a comma.\n" +
-                    "${commandList["lyrics"]}                                      -Shows lyrics for the currently playing track.\n" +
+                    "${commandList["loop"]}                                        -Toggles looping of the current track on/off\n" +
+                    "${commandList["loopqueue"]}                                   -Toggles looping of the entire queue on/off\n" +
+                    "${commandList["loopoff"]}                                     -Turns off all looping\n" +
+                    "${commandList["loopstatus"]}                                  -Shows current loop mode\n" +
+                    "${commandList["search"]} <service> <type> <text> <limit>      -Search on music services. Shows 10 first results by default. <type> can be track, video, playlist or channel. You can set the amount of results with the -l/--limit flag.\n" +
+                    "${commandList["info"]} <link/search query>                    -Shows info on the given search query or link(s). <link> can be one or more links, separated by a comma.\n" +
+                    "${commandList["volume"]} <0-150>                              -Get or set playback volume (0-150%).\n" +
+                    "${commandList["volumeup"]}                                    -Increase volume by 10%\n" +
+                    "${commandList["volumedown"]}                                  -Decrease volume by 10%\n" +
+                    "${commandList["mute"]}                                        -Mute/unmute playback\n" +
                     "${commandList["goto"]} <channelpath> -p <channelpassword>     -Move the bot to a different channel.\n" +
-                    "${commandList["return"]}                                      -Return the bot back to the original channel.\n" +
-                    "\n\n" +
-                    "Player specific commands:\n" +
-                    "(These aren't normally needed. Using the commands above is recommended instead)\n" +
-                    "\n" +
-                    "Spotify commands:\n" +
-                    "${commandList["sp-pause"]}                    -Pauses the Spotify playback\n" +
-                    "${commandList["sp-resume"]}                   -Resumes the Spotify playback\n" +
-                    "${commandList["sp-play"]}                     -Resumes the Spotify playback\n" +
-                    "${commandList["sp-stop"]}                     -Stops the Spotify playback\n" +
-                    "${commandList["sp-skip"]}                     -Skips the currently playing track\n" +
-                    "${commandList["sp-next"]}                     -Skips the currently playing track\n" +
-                    "${commandList["sp-prev"]}                     -Plays the previous track\n" +
-                    "${commandList["sp-playsong"]} <track>         -Plays a Spotify song. <track> should be your song link or Spotify URI\n" +
-                    "${commandList["sp-playlist"]} <playlist>      -Plays a Spotify playlist. <playlist> should be your playlist's link or Spotify URI\n" +
-                    "${commandList["sp-playalbum"]} <album>        -Plays a Spotify album <album> should be your album's link or Spotify URI\n" +
-                    "${commandList["sp-nowplaying"]}               -Shows information on currently playing track\n" +
-                    "\n" +
-                    "YouTube commands:\n" +
-                    "${commandList["yt-pause"]}                    -Pauses the YouTube playback\n" +
-                    "${commandList["yt-resume"]}                   -Resumes the YouTube playback\n" +
-                    "${commandList["yt-play"]}                     -Resumes the YouTube playback\n" +
-                    "${commandList["yt-stop"]}                     -Stops the YouTube playback\n" +
-                    "${commandList["yt-playsong"]} <link>          -Plays a YouTube song based on link\n" +
-                    "${commandList["yt-nowplaying"]}               -Shows information on currently playing track\n" +
-                    "\n" +
-                    "SoundCloud commands:\n" +
-                    "${commandList["sc-pause"]}                    -Pauses SoundCloud playback\n" +
-                    "${commandList["sc-resume"]}                   -Resumes the SoundCloud playback\n" +
-                    "${commandList["sc-play"]}                     -Resumes the SoundCloud playback\n" +
-                    "${commandList["sc-stop"]}                     -Stops the SoundCloud playback\n" +
-                    "${commandList["sc-playsong"]} <link>          -Plays a SoundCloud song based on link\n" +
-                    "${commandList["sc-nowplaying"]}               -Shows information on currently playing track\n",
+                    "${commandList["return"]}                                      -Return the bot back to the original channel.\n",
             ),
             Pair(
                 "queue-add",
@@ -136,18 +99,12 @@ data class CommandList(
                     "-p    \t-Add track(s) to a specific position in the queue.\n" +
                     "-r    \t-Reverse playlist/album etc. before adding to the queue.\n" +
                     "-l    \t-Limit the amount of tracks to add from the given list(s).\n" +
-                    "-t    \t-Add only tracks from the given SoundCloud link (likes/reposts)\n" +
-                    "-P    \t-Add only playlists from the given SoundCloud link (likes/reposts)\n" +
                     "Example - Add playlist to queue at position 15 and shuffle it before that:\n" +
-                    "${commandList["queue-add"]} -s https://open.spotify.com/playlist/0wlRan09Ls8XDmFXNo07Tt -p 15\n" +
-                    "Example - Search for an album on spotify and add it to the queue:\n" +
-                    "${commandList["queue-add"]} spotify album Haken Affinity:\n" +
-                    "Example - Search for a podcast on spotify and add it to the queue:\n" +
-                    "${commandList["queue-add"]} sp podcast Joe Rogan Experience\n" +
-                    "Example - Search for a video on YouTube and add it to the queue:\n" +
-                    "${commandList["queue-add"]} youtube video Haken Initiate\n" +
-                    "Example - Search for a playlist on SoundCloud and add it to the queue:\n" +
-                    "${commandList["queue-add"]} soundcloud playlist jeesjees",
+                    "${commandList["queue-add"]} -s https://bandcamp.com/album/example -p 15\n" +
+                    "Example - Search for an album and add it to the queue:\n" +
+                    "${commandList["queue-add"]} bandcamp album Haken Affinity\n" +
+                    "Example - Search for a track and add it to the queue:\n" +
+                    "${commandList["queue-add"]} bandcamp track Haken Initiate",
             ),
             Pair(
                 "queue-playnext",
@@ -164,26 +121,20 @@ data class CommandList(
                     "-p    \t-Add track(s) to a specific position in the queue.\n" +
                     "-r    \t-Reverse playlist/album etc. before adding to the queue.\n" +
                     "-l    \t-Limit the amount of tracks to add from the given list(s).\n" +
-                    "-t    \t-Add only tracks from the given SoundCloud link (likes/reposts)\n" +
-                    "-P    \t-Add only playlists from the given SoundCloud link (likes/reposts)\n" +
                     "Example - Add playlist to queue at position 15 and shuffle it before that:\n" +
-                    "${commandList["queue-playnext"]} -s https://open.spotify.com/playlist/0wlRan09Ls8XDmFXNo07Tt -p 15\n" +
-                    "Example - Search for an album on spotify and add it to the queue:\n" +
-                    "${commandList["queue-playnext"]} spotify album Haken Affinity:\n" +
-                    "Example - Search for a podcast on spotify and add it to the queue:\n" +
-                    "${commandList["queue-playnext"]} sp podcast Joe Rogan Experience\n" +
-                    "Example - Search for a video on YouTube and add it to the queue:\n" +
-                    "${commandList["queue-playnext"]} youtube video Haken Initiate\n" +
-                    "Example - Search for a playlist on SoundCloud and add it to the queue:\n" +
-                    "${commandList["queue-playnext"]} soundcloud playlist jeesjees",
+                    "${commandList["queue-playnext"]} -s https://bandcamp.com/album/example -p 15\n" +
+                    "Example - Search for an album and add it to the queue:\n" +
+                    "${commandList["queue-playnext"]} bandcamp album Haken Affinity\n" +
+                    "Example - Search for a track and add it to the queue:\n" +
+                    "${commandList["queue-playnext"]} bandcamp track Haken Initiate",
             ),
             Pair(
                 "queue-playnow",
                 "\n" +
                     "Showing help for ${commandList["queue-playnow"]} command:\n" +
                     "${commandList["queue-playnow"]} can be used if you want to add songs to the top of the queue, and start playing them immediately.\n" +
-                    "Example - Search on spotify for the track \"Pink Floyd - Time\", add the first result to the queue and then start playing it:\n" +
-                    "${commandList["queue-playnow"]} sp track pink floyd time",
+                    "Example - Search for the track \"Pink Floyd - Time\", add the first result to the queue and then start playing it:\n" +
+                    "${commandList["queue-playnow"]} track pink floyd time",
             ),
             Pair(
                 "queue-play",
@@ -207,12 +158,12 @@ data class CommandList(
                 "play",
                 "\n" +
                     "Showing help for ${commandList["play"]} command:\n" +
-                    "${commandList["play"]} searches YouTube without requiring API keys or Spotify Premium and starts playback immediately.\n" +
-                    "You can also pass a direct YouTube, SoundCloud, or Bandcamp link.\n" +
+                    "${commandList["play"]} searches online music services and starts playback immediately.\n" +
+                    "You can also pass a direct music link.\n" +
                     "Example - Search and play a song:\n" +
                     "${commandList["play"]} never gonna give you up\n" +
                     "Example - Play a direct link:\n" +
-                    "${commandList["play"]} https://youtu.be/dQw4w9WgXcQ",
+                    "${commandList["play"]} https://bandcamp.com/track/example",
             ),
             Pair(
                 "queue-delete",
@@ -226,21 +177,13 @@ data class CommandList(
                     "-f, --first    \t-Delete the first matching track(s) from the queue.\n" +
                     "-A, --all-artist-tracks    -Delete all tracks where the given artist appears.\n" +
                     "Example - Delete a track from the queue using a link:\n" +
-                    "${commandList["queue-delete"]} https://open.spotify.com/track/54k9d97GSM3lBXY61UagKx\n" +
+                    "${commandList["queue-delete"]} https://bandcamp.com/track/example\n" +
                     "Example - Delete multiple tracks using links:\n" +
-                    "${commandList["queue-delete"]} https://open.spotify.com/track/54k9d97GSM3lBXY61UagKx, https://open.spotify.com/track/6le9zgS2y7MQKvDmmGABDW\n" +
+                    "${commandList["queue-delete"]} https://bandcamp.com/track/example, https://bandcamp.com/track/example2\n" +
                     "Example - Delete a track from the queue at position 86:\n" +
                     "${commandList["queue-delete"]} 86\n" +
-                    "Example - Delete a track from the queue at position 86 and 23:\n" +
-                    "${commandList["queue-delete"]} 86, 23\n" +
                     "Example - Delete all tracks matching the given link:\n" +
-                    "${commandList["queue-delete"]} --all https://open.spotify.com/track/54k9d97GSM3lBXY61UagKx\n" +
-                    "Example - Delete all tracks matching the given link:\n" +
-                    "${commandList["queue-delete"]} https://open.spotify.com/track/54k9d97GSM3lBXY61UagKx, https://open.spotify.com/track/6le9zgS2y7MQKvDmmGABDW -a\n" +
-                    "Example - Delete all tracks where the an artist appears:\n" +
-                    "${commandList["queue-delete"]} -A https://open.spotify.com/artist/4l0zTor5S32Yly4uw96Bto\n" +
-                    "Example - Delete all tracks where the spotify artist \"lil pump\" appears:\n" +
-                    "${commandList["queue-delete"]} -aA sp artist lil pump",
+                    "${commandList["queue-delete"]} --all https://bandcamp.com/track/example",
             ),
             Pair(
                 "queue-clear",
@@ -259,20 +202,20 @@ data class CommandList(
                 "queue-shuffle",
                 "\n" +
                     "Showing help for ${commandList["queue-shuffle"]} command:\n" +
-                    "${commandList["queue-shuffle"]} shuffles the song queue.",
+                    "${commandList["queue-shuffle"]} shuffles the song queue.\n" +
+                    "You can also use ${commandList["shuffle"]} as a shortcut.",
+            ),
+            Pair(
+                "shuffle",
+                "\n" +
+                    "Showing help for ${commandList["shuffle"]} command:\n" +
+                    "${commandList["shuffle"]} shuffles the song queue. Same as ${commandList["queue-shuffle"]}.",
             ),
             Pair(
                 "queue-skip",
                 "\n" +
                     "Showing help for ${commandList["queue-skip"]} command:\n" +
-                    "${commandList["queue-skip"]} skips to the next song in the queue.",
-            ),
-            Pair(
-                "queue-voteskip",
-                "\n" +
-                    "Showing help for ${commandList["queue-voteskip"]} command:\n" +
-                    "${commandList["queue-voteskip"]} lets you vote to skip the currently playing track in the queue.\n" +
-                    "All currently listening users will have to run ${commandList["queue-voteskip"]} too for the skip to happen.",
+                    "${commandList["queue-skip"]} skips the currently playing song instantly.",
             ),
             Pair(
                 "queue-move",
@@ -288,17 +231,11 @@ data class CommandList(
                     "-a, --all             \t\tMove all matching songs to the new position.\n" +
                     "-f, --first           \t\tMove the first matching song to the new position.\n" +
                     "Example - Move all matching songs to position 10:\n" +
-                    "${commandList["queue-move"]} -a https://open.spotify.com/track/6H0zRPEV1ezBHOidNXSt1D -p 10\n" +
-                    "${commandList["queue-move"]} --all https://open.spotify.com/track/6H0zRPEV1ezBHOidNXSt1D --position 10\n" +
+                    "${commandList["queue-move"]} -a https://bandcamp.com/track/example -p 10\n" +
                     "Example - Move a song from position 5 to position 0:\n" +
                     "${commandList["queue-move"]} 5 -p 0\n" +
                     "Example - Move first matching song to position 10:\n" +
-                    "${commandList["queue-move"]} -f https://open.spotify.com/track/6H0zRPEV1ezBHOidNXSt1D -p 10\n" +
-                    "${commandList["queue-move"]} --first https://open.spotify.com/track/6H0zRPEV1ezBHOidNXSt1D --position 10\n" +
-                    "Example - Move songs from position 3 and 14 to position 5:\n" +
-                    "${commandList["queue-move"]} 3, 14 -p 5\n" +
-                    "Example - Move first matches of songs to position 8:\n" +
-                    "${commandList["queue-move"]} -f https://open.spotify.com/track/54k9d97GSM3lBXY61UagKx, https://open.spotify.com/track/6le9zgS2y7MQKvDmmGABDW -p 8",
+                    "${commandList["queue-move"]} -f https://bandcamp.com/track/example -p 10",
             ),
             Pair(
                 "queue-stop",
@@ -317,7 +254,14 @@ data class CommandList(
                 "queue-nowplaying",
                 "\n" +
                     "Showing help for ${commandList["queue-nowplaying"]} command:\n" +
-                    "${commandList["queue-nowplaying"]} returns information on the currently playing song.",
+                    "${commandList["queue-nowplaying"]} returns information on the currently playing song.\n" +
+                    "You can also use ${commandList["nowplaying"]} as a shortcut.",
+            ),
+            Pair(
+                "nowplaying",
+                "\n" +
+                    "Showing help for ${commandList["nowplaying"]} command:\n" +
+                    "${commandList["nowplaying"]} returns information on the currently playing song. Same as ${commandList["queue-nowplaying"]}.",
             ),
             Pair(
                 "queue-pause",
@@ -344,62 +288,99 @@ data class CommandList(
                     "${commandList["queue-repeat"]} -a 5",
             ),
             Pair(
+                "loop",
+                "\n" +
+                    "Showing help for ${commandList["loop"]} command:\n" +
+                    "${commandList["loop"]} toggles looping of the current track.\n" +
+                    "When enabled, the currently playing song will restart automatically when it ends.\n" +
+                    "Use ${commandList["loopoff"]} to disable or ${commandList["loopstatus"]} to check.",
+            ),
+            Pair(
+                "loopqueue",
+                "\n" +
+                    "Showing help for ${commandList["loopqueue"]} command:\n" +
+                    "${commandList["loopqueue"]} toggles looping of the entire queue.\n" +
+                    "When enabled, songs are re-added to the end of the queue after playing.",
+            ),
+            Pair(
+                "loopoff",
+                "\n" +
+                    "Showing help for ${commandList["loopoff"]} command:\n" +
+                    "${commandList["loopoff"]} disables all looping (track and queue).",
+            ),
+            Pair(
+                "loopstatus",
+                "\n" +
+                    "Showing help for ${commandList["loopstatus"]} command:\n" +
+                    "${commandList["loopstatus"]} shows the current loop mode (off, track, or queue).",
+            ),
+            Pair(
+                "volume",
+                "\n" +
+                    "Showing help for ${commandList["volume"]} command:\n" +
+                    "${commandList["volume"]} gets or sets the playback volume.\n" +
+                    "Volume range is 0 to 150 (percent).\n" +
+                    "Use without a value to see the current volume.\n" +
+                    "Aliases: ${commandList["volume-short"]}\n" +
+                    "Example - Set volume to 80%:\n" +
+                    "${commandList["volume"]} 80\n" +
+                    "Example - Check current volume:\n" +
+                    "${commandList["volume"]}",
+            ),
+            Pair(
+                "volumeup",
+                "\n" +
+                    "Showing help for ${commandList["volumeup"]} command:\n" +
+                    "${commandList["volumeup"]} increases the volume by 10%.\n" +
+                    "Alias: ${commandList["volume-up-short"]}",
+            ),
+            Pair(
+                "volumedown",
+                "\n" +
+                    "Showing help for ${commandList["volumedown"]} command:\n" +
+                    "${commandList["volumedown"]} decreases the volume by 10%.\n" +
+                    "Alias: ${commandList["volume-down-short"]}",
+            ),
+            Pair(
+                "mute",
+                "\n" +
+                    "Showing help for ${commandList["mute"]} command:\n" +
+                    "${commandList["mute"]} toggles mute. If volume is above 0, it mutes. If already muted, it unmutes to 50%.",
+            ),
+            Pair(
                 "info",
                 "\n" +
                     "Showing help for ${commandList["info"]} command:\n" +
                     "${commandList["info"]} shows information on a given search query or link(s).\n" +
                     "You can either use 1 or more links,\n" +
-                    "or search for something on Spotify/YouTube/SoundCloud using the same syntax as with the ${commandList["search"]} command.\n" +
-                    "Example 1 - Get info on Spotify track link:\n" +
-                    "${commandList["info"]} https://open.spotify.com/track/2igwFfvr1OAGX9SKDCPBwO\n" +
-                    "Example 2 - Get info on Spotify URI:\n" +
-                    "${commandList["info"]} spotify:track:2igwFfvr1OAGX9SKDCPBwO" +
-                    "Example 3 - Get info on SoundCloud track link:\n" +
-                    "${commandList["info"]} https://soundcloud.com/iamleeya/something-worth-dreaming-of\n" +
-                    "Example 4 - Get info on YouTube track link:\n" +
-                    "${commandList["info"]} https://www.youtube.com/watch?v=IKZnGWxJN3I\n" +
-                    "Example 5 - Get info on YouTube and SoundCloud link:\n" +
-                    "${commandList["info"]} https://youtu.be/IKZnGWxJN3I,https://soundcloud.com/iamleeya/something-worth-dreaming-of\n" +
-                    "Example 6 - Show info on the Spotify artist \"The Algorithm\":\n" +
-                    "${commandList["info"]} sp artist the algorithm",
+                    "or search for something using the same syntax as with the ${commandList["search"]} command.\n" +
+                    "Example - Get info on a track link:\n" +
+                    "${commandList["info"]} https://bandcamp.com/track/example\n" +
+                    "Example 2 - Show info on the artist \"The Algorithm\":\n" +
+                    "${commandList["info"]} bc artist the algorithm",
             ),
             Pair(
                 "search",
                 "\n" +
                     "Showing help for ${commandList["search"]} command:\n" +
-                    "${commandList["search"]} can be used to search for tracks, playlists and users on Spotify, Youtube and SoundCloud.\n" +
+                    "${commandList["search"]} can be used to search for tracks, playlists and albums on supported music services.\n" +
                     "When searching, you first need to specify which service you want to search on.\n" +
                     "Available services:\n" +
-                    "sp, spotify    \t\tDo a Spotify search.\n" +
-                    "sc, soundcloud \t\tDo a SoundCloud search.\n" +
-                    "yt, youtube    \t\tDo a YouTube search.\n" +
                     "bc, bandcamp   \t\tDo a Bandcamp search.\n" +
                     "sl, songlink   \t\tDo a SongLink search.\n" +
                     "am, applemusic   \t\tDo an Apple Music search.\n" +
                     "After that, specify what type of search you are doing.\n" +
                     "Available search types:\n" +
-                    "track    \t\tSearch for a track. (Spotify, YouTube, SoundCloud, Bandcamp, SongLink, Apple Music)\n" +
-                    "playlist    \tSearch for a playlist. (Spotify, YouTube, SoundCloud)\n" +
-                    "user      \t\tSearch for a user. (SoundCloud)\n" +
-                    "album   \t\tSearch for an album. (Spotify, SoundCloud, Bandcamp, SongLink, Apple Music)\n" +
-                    "artist   \t\tSearch for an artist. (Spotify, SoundCloud, Bandcamp)\n" +
-                    "podcast  \t\tSearch for a podcast. (Spotify, SongLink, Apple Music)\n" +
-                    "show     \t\tSame as podcast. (Spotify, SongLink, Apple Music)\n" +
-                    "episode  \t\tSearch for a podcast episode. (Spotify)\n" +
-                    "video    \t\tSearch for a video. Same as track. (YouTube)\n" +
-                    "channel   \tSearch for a channel. (YouTube)\n" +
+                    "track    \t\tSearch for a track.\n" +
+                    "album   \t\tSearch for an album.\n" +
+                    "artist   \t\tSearch for an artist.\n" +
+                    "podcast  \t\tSearch for a podcast.\n" +
                     "Available options:\n" +
                     "-l, --limit    \tSet amount of search results to show.\n" +
-                    "Example - Search on SoundCloud for a track with the name \"leeya - something worth dreaming of\":\n" +
-                    "${commandList["search"]} sc track leeya something worth dreaming of\n" +
-                    "Example 2 - Search on SoundCloud for a playlist with the name \"jeesjees\" and set a limit to show 10 search results:\n" +
-                    "${commandList["search"]} sc playlist jeesjees --limit 10\n" +
-                    "Example 3 - Search on SoundCloud for a user with the name \"bettehem\":\n" +
-                    "${commandList["search"]} soundcloud user bettehem\n" +
-                    "Example - Search for a Spotify album with the keywords \"The Algorithm Brute Force\" and set a limit to show only 5 search results:\n" +
-                    "${commandList["search"]} sp album The Algorithm Brute Force --limit 5\n" +
-                    "Example - Search on YouTube for a video with the name \"Jinjer Pisces\":\n" +
-                    "${commandList["search"]} yt track Jinjer Pisces",
+                    "Example - Search on Bandcamp for a track with the name \"Haken - Initiate\":\n" +
+                    "${commandList["search"]} bc track Haken Initiate\n" +
+                    "Example 2 - Search on Bandcamp for an album with the name \"Affinity\" and set a limit to show 5 search results:\n" +
+                    "${commandList["search"]} bc album Affinity --limit 5",
             ),
             Pair(
                 "goto",
@@ -414,170 +395,10 @@ data class CommandList(
                     "${commandList["goto"]} \"Music/Music Bot\" -p \"secret password\"",
             ),
             Pair(
-                "lyrics",
-                "\n" +
-                    "Showing help for ${commandList["lyrics"]} command:\n" +
-                    "${commandList["lyrics"]} can be used to get lyrics for the currently playing track."
-            ),
-            Pair(
                 "return",
                 "\n" +
                     "Showing help for ${commandList["return"]} command:\n" +
-                    "${commandList["goto"]} can be used to return the bot to the original channel.",
-            ),
-            Pair(
-                "sp-pause",
-                "\n" +
-                    "Showing help for ${commandList["sp-pause"]} command:\n" +
-                    "${commandList["sp-pause"]} pauses Spotify playback.",
-            ),
-            Pair(
-                "sp-resume",
-                "\n" +
-                    "Showing help for ${commandList["sp-resume"]} command:\n" +
-                    "${commandList["sp-resume"]} resumes Spotify playback.",
-            ),
-            Pair(
-                "sp-play",
-                "\n" +
-                    "Showing help for ${commandList["sp-play"]} command:\n" +
-                    "${commandList["sp-play"]} starts/resumes Spotify playback.",
-            ),
-            Pair(
-                "sp-stop",
-                "\n" +
-                    "Showing help for ${commandList["sp-stop"]} command:\n" +
-                    "${commandList["sp-stop"]} stops or pauses Spotify playback.",
-            ),
-            Pair(
-                "sp-skip",
-                "\n" +
-                    "Showing help for ${commandList["sp-skip"]} command:\n" +
-                    "${commandList["sp-skip"]} skips to the next Spotify song in the queue.\n" +
-                    "This only affects Spotify's internal song queue and has nothing to do with the music bot's own queue.",
-            ),
-            Pair(
-                "sp-next",
-                "\n" +
-                    "Showing help for ${commandList["sp-next"]} command:\n" +
-                    "${commandList["sp-next"]} skips to the next Spotify song in the queue.",
-            ),
-            Pair(
-                "sp-prev",
-                "\n" +
-                    "Showing help for ${commandList["sp-prev"]} command:\n" +
-                    "${commandList["sp-prev"]} goes back to the previous song in Spotify.",
-            ),
-            Pair(
-                "sp-playsong",
-                "\n" +
-                    "Showing help for ${commandList["sp-playsong"]} command:\n" +
-                    "${commandList["sp-playsong"]} plays a song on Spotify.\n" +
-                    "Example - Play a song on Spotify:\n" +
-                    "${commandList["sp-playsong"]} https://open.spotify.com/track/2GYHyAoLWpkxLVa4oYTVko",
-            ),
-            Pair(
-                "sp-playlist",
-                "\n" +
-                    "Showing help for ${commandList["sp-playlist"]} command:\n" +
-                    "${commandList["sp-playlist"]} starts a playlist on Spotify.\n" +
-                    "Example - Start a playlist on Spotify:\n" +
-                    "${commandList["sp-playlist"]} https://open.spotify.com/playlist/0wlRan09Ls8XDmFXNo07Tt",
-            ),
-            Pair(
-                "sp-playalbum",
-                "\n" +
-                    "Showing help for ${commandList["sp-playalbum"]} command:\n" +
-                    "${commandList["sp-playalbum"]} plays an album on Spotify.\n" +
-                    "Example - Start playing an album on Spotify:\n" +
-                    "${commandList["sp-playalbum"]} https://open.spotify.com/album/4Ijivtrfqk2AMTF4dhrl2Q",
-            ),
-            Pair(
-                "sp-nowplaying",
-                "\n" +
-                    "Showing help for ${commandList["sp-nowplaying"]} command:\n" +
-                    "${commandList["sp-nowplaying"]} returns details on the currently playing track on Spotify.",
-            ),
-            Pair(
-                "yt-pause",
-                "\n" +
-                    "Showing help for ${commandList["yt-pause"]} command:\n" +
-                    "${commandList["yt-pause"]} pauses YouTube playback.",
-            ),
-            Pair(
-                "yt-resume",
-                "\n" +
-                    "Showing help for ${commandList["yt-resume"]} command:\n" +
-                    "${commandList["yt-resume"]} resumes YouTube playback.",
-            ),
-            Pair(
-                "yt-play",
-                "\n" +
-                    "Showing help for ${commandList["yt-play"]} command:\n" +
-                    "${commandList["yt-play"]} resumes YouTube playback if it was paused.",
-            ),
-            Pair(
-                "yt-stop",
-                "\n" +
-                    "Showing help for ${commandList["yt-stop"]} command:\n" +
-                    "${commandList["yt-stop"]} stops YouTube playback.\n" +
-                    "This is different from ${commandList["yt-pause"]} command, because ${commandList["yt-stop"]} also exits the player,\n" +
-                    "meaning the song can't be resumed.",
-            ),
-            Pair(
-                "yt-playsong",
-                "\n" +
-                    "Showing help for ${commandList["yt-playsong"]} command:\n" +
-                    "${commandList["yt-playsong"]} plays a song from YouTube.\n" +
-                    "Example - Play a song from YouTube:\n" +
-                    "${commandList["yt-playsong"]} https://youtu.be/Pn2xd6_-baY\n" +
-                    "Example - Play a song from YouTube:\n" +
-                    "${commandList["yt-playsong"]} https://www.youtube.com/watch?v=Pn2xd6_-baY",
-            ),
-            Pair(
-                "yt-nowplaying",
-                "\n" +
-                    "Showing help for ${commandList["yt-nowplaying"]} command:\n" +
-                    "${commandList["yt-nowplaying"]} returns information on the currently playing YouTube track.",
-            ),
-            Pair(
-                "sc-pause",
-                "\n" +
-                    "Showing help for ${commandList["sc-pause"]} command:\n" +
-                    "${commandList["sc-pause"]} pauses SoundCloud playback.",
-            ),
-            Pair(
-                "sc-resume",
-                "\n" +
-                    "Showing help for ${commandList["sc-resume"]} command:\n" +
-                    "${commandList["sc-resume"]} resumes SoundCloud playback.",
-            ),
-            Pair(
-                "sc-play",
-                "\n" +
-                    "Showing help for ${commandList["sc-play"]} command:\n" +
-                    "${commandList["sc-play"]} resumes SoundCloud playback if it was paused.",
-            ),
-            Pair(
-                "sc-stop",
-                "\n" +
-                    "Showing help for ${commandList["sc-stop"]} command:\n" +
-                    "${commandList["sc-stop"]} stops SoundCloud playback. This is different from ${commandList["sc-pause"]},\n" +
-                    "because ${commandList["sc-stop"]} also exits the player, which means that the song can't be resumed.",
-            ),
-            Pair(
-                "sc-playsong",
-                "\n" +
-                    "Showing help for ${commandList["sc-playsong"]} command:\n" +
-                    "${commandList["sc-playsong"]} plays a song from SoundCloud.\n" +
-                    "Example - play a song from SoundCloud:\n" +
-                    "${commandList["sc-playsong"]} https://soundcloud.com/mrsuicidesheep/imagined-herbal-flows-clouds",
-            ),
-            Pair(
-                "sc-nowplaying",
-                "\n" +
-                    "Showing help for ${commandList["sc-nowplaying"]} command:\n" +
-                    "${commandList["sc-playsong"]} returns information on the currently playing SoundCloud track.",
+                    "${commandList["return"]} can be used to return the bot to the original channel.",
             ),
         )
 

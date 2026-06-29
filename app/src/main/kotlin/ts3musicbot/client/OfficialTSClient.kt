@@ -171,7 +171,7 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
      * get then name of the current channel
      * @return returns the name of the current channel
      */
-    private fun getCurrentChannelName(): String {
+    override fun getCurrentChannelName(): String {
         val connectInfo = clientQuery("channelconnectinfo").lines()
         return when {
             connectInfo.any { it.startsWith("path=") } ->
@@ -475,6 +475,25 @@ class OfficialTSClient(botSettings: BotSettings) : Client(botSettings) {
         exportFile("plugins/clientquery_plugin/verifyserverpassword.txt")
         exportFile("plugins/clientquery_plugin/whoami.txt")
         exportFile("plugins/libclientquery_plugin_linux_amd64.so")
+    }
+
+    fun disableAGC() {
+        val dbFile = File("$tsClientDirPath/settings.db")
+        if (dbFile.exists()) {
+            println("Disabling TeamSpeak AGC (Automatic Gain Control) to prevent volume waves...")
+            try {
+                val dbPath = dbFile.absolutePath
+                val pythonScript = "import sqlite3; conn = sqlite3.connect('$dbPath'); conn.execute(\"UPDATE Profiles SET value = replace(value, 'agc=true', 'agc=false') WHERE key='Capture/Default/PreProcessing'\"); conn.commit(); conn.close()"
+                val output = CommandRunner().runCommand("python3 -c \"$pythonScript\"", ignoreOutput = true)
+                if (output.errorText.isNotEmpty()) {
+                    println("Error disabling AGC: ${output.errorText}")
+                } else {
+                    println("Successfully disabled AGC in settings.db.")
+                }
+            } catch (e: Exception) {
+                println("Failed to disable AGC: ${e.message}")
+            }
+        }
     }
 
     /**

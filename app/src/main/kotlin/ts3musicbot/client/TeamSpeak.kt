@@ -76,10 +76,8 @@ class TeamSpeak(botSettings: BotSettings) : Client(botSettings), TS3Listener {
      */
     override fun getChannelList(): List<String> =
         clientSocket.listChannels().map {
-            encode(
-                "cid=${it.id} pid=${it.parentChannelId} channel_order=${it.order} channel_name=${it.name} " +
-                    "channel_flag_are_subscribed=1 total_clients=${it.totalClients}",
-            )
+            "cid=${it.id} pid=${it.parentChannelId} channel_order=${it.order} channel_name=${encode(it.name)} " +
+                "channel_flag_are_subscribed=1 total_clients=${it.totalClients}"
         }
 
     /**
@@ -90,11 +88,30 @@ class TeamSpeak(botSettings: BotSettings) : Client(botSettings), TS3Listener {
      */
     override fun getClientList(): List<String> =
         clientSocket.listClients().map {
-            encode(
-                "clid=${it.id} cid=${it.channelId} client_database_id=${it.databaseId} " +
-                    "client_nickname=${it.nickname} client_type=${it.type}",
-            )
+            "clid=${it.id} cid=${it.channelId} client_database_id=${it.databaseId} " +
+                "client_nickname=${encode(it.nickname)} client_type=${it.type}"
         }
+
+    override fun getCurrentChannelId(): String =
+        clientSocket.getClientInfo(clientSocket.clientId).channelId.toString()
+
+    override fun getCurrentChannelName(): String =
+        getChannelNameById(getCurrentChannelId())
+
+    override fun getChannelNameById(channelId: String): String =
+        clientSocket.listChannels()
+            .firstOrNull { it.id.toString() == channelId }
+            ?.name
+            .orEmpty()
+
+    private fun normalizeNickname(nickname: String): String =
+        nickname.trim().removeSurrounding("\"")
+
+    override fun getClientChannelId(nickname: String): String? =
+        clientSocket.listClients()
+            .firstOrNull { normalizeNickname(it.nickname) == normalizeNickname(nickname) }
+            ?.channelId
+            ?.toString()
 
     /**
      * get a channel's id
@@ -155,6 +172,19 @@ class TeamSpeak(botSettings: BotSettings) : Client(botSettings), TS3Listener {
             println("Failed to join channel!")
         }
         return clientSocket.getClientInfo(clientSocket.clientId).channelId == getChannelId(channelName)
+    }
+
+    override suspend fun joinChannelById(
+        channelId: String,
+        channelPassword: String,
+    ): Boolean {
+        try {
+            clientSocket.joinChannel(channelId.toInt(), channelPassword)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Failed to join channel!")
+        }
+        return getCurrentChannelId() == channelId
     }
 
     /**

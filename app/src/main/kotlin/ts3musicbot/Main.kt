@@ -368,6 +368,7 @@ class Main :
                             officialTSClient.exportTeamSpeakSettings()
                         }
 
+                        officialTSClient.disableAGC()
                         if (officialTSClient.startTeamSpeak()) {
                             officialTSClient.joinChannel()
                             chatReader =
@@ -517,6 +518,14 @@ class Main :
                 fileWriter.println("SP_API_KEY=${botSettings.spApiKey}")
                 fileWriter.println("SP_CLIENT_ID=${botSettings.spClientId}")
                 fileWriter.println("SP_CLIENT_SECRET=${botSettings.spClientSecret}")
+                fileWriter.println("MUSIC_PERMISSION_NICKNAMES=${botSettings.musicPermissionNicknames}")
+                fileWriter.println("MUSIC_PERMISSION_SERVER_GROUPS=${botSettings.musicPermissionServerGroups}")
+                fileWriter.println("MUSIC_PERMISSION_CHANNEL_GROUPS=${botSettings.musicPermissionChannelGroups}")
+                fileWriter.println("ADMIN_PERMISSION_NICKNAMES=${botSettings.adminPermissionNicknames}")
+                fileWriter.println("ADMIN_PERMISSION_SERVER_GROUPS=${botSettings.adminPermissionServerGroups}")
+                fileWriter.println("ADMIN_PERMISSION_CHANNEL_GROUPS=${botSettings.adminPermissionChannelGroups}")
+                fileWriter.println("OWNER_NICKNAMES=${botSettings.ownerNicknames}")
+                fileWriter.println("COMMAND_COOLDOWN_SECONDS=${botSettings.commandCooldownSeconds}")
                 fileWriter.println()
                 fileWriter.close()
             }
@@ -562,6 +571,17 @@ class Main :
                         "SP_API_KEY" -> settings.spApiKey = line.substringAfter("=").replace(" ", "")
                         "SP_CLIENT_ID" -> settings.spClientId = line.substringAfter("=").replace(" ", "")
                         "SP_CLIENT_SECRET" -> settings.spClientSecret = line.substringAfter("=").replace(" ", "")
+                        "MUSIC_PERMISSION_NICKNAMES" -> settings.musicPermissionNicknames = line.substringAfter("=")
+                        "MUSIC_PERMISSION_SERVER_GROUPS" -> settings.musicPermissionServerGroups = line.substringAfter("=")
+                        "MUSIC_PERMISSION_CHANNEL_GROUPS" -> settings.musicPermissionChannelGroups = line.substringAfter("=")
+                        "ADMIN_PERMISSION_NICKNAMES" -> settings.adminPermissionNicknames = line.substringAfter("=")
+                        "ADMIN_PERMISSION_SERVER_GROUPS" -> settings.adminPermissionServerGroups = line.substringAfter("=")
+                        "ADMIN_PERMISSION_CHANNEL_GROUPS" -> settings.adminPermissionChannelGroups = line.substringAfter("=")
+                        "OWNER_NICKNAMES" -> settings.ownerNicknames = line.substringAfter("=")
+                        "COMMAND_COOLDOWN_SECONDS" -> {
+                            val seconds = line.substringAfter("=").replace(" ", "")
+                            settings.commandCooldownSeconds = if (seconds.isNotEmpty()) seconds.toInt() else settings.commandCooldownSeconds
+                        }
                     }
                 }
             }
@@ -1065,6 +1085,7 @@ class Main :
                             officialTSClient.exportTeamSpeakSettings()
                         }
 
+                        officialTSClient.disableAGC()
                         if (officialTSClient.startTeamSpeak()) {
                             statusTextView.text = "Status: Connected."
                             startBotButton.isManaged = false

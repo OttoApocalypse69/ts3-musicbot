@@ -52,6 +52,18 @@ fun playerctl(
         printErrors = false,
     )
 
+    fun dbusSet(
+        property: String,
+        signature: String,
+        value: String,
+    ) = commandRunner.runCommand(
+        "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.$mediaPlayer /org/mpris/MediaPlayer2 " +
+            "org.freedesktop.DBus.Properties.Set string:'org.mpris.MediaPlayer2.Player' " +
+            "string:'$property' variant:$signature:$value",
+        printOutput = false,
+        printErrors = false,
+    )
+
     fun parseMetadata(metadata: String): Map<String, Any> {
         val metadataMap = emptyMap<String, Any>().toMutableMap()
         val subArray = ArrayList<String>()
@@ -196,6 +208,21 @@ fun playerctl(
                     playerctl(player, "metadata").outputText.lines().first { it.contains("mpris:trackid") }
                         .replace("\\S+\\s+mpris:trackid\\s+".toRegex(), "")
                 dbusSend("SetPosition", "objpath:$trackId int64:" + extra.toLong() * 1000000)
+            }
+        }
+
+        "volume" -> {
+            if (extra.isEmpty()) {
+                val cmd = dbusGet("Volume")
+                val volume = cmd.outputText.substringAfter("double").trim().lineSequence().firstOrNull().orEmpty()
+                Output(volume, cmd.errorText)
+            } else {
+                val volume =
+                    extra
+                        .toDoubleOrNull()
+                        ?.coerceIn(0.0, 1.5)
+                        ?: return Output("", "Invalid volume value: $extra")
+                dbusSet("Volume", "double", "$volume")
             }
         }
 
