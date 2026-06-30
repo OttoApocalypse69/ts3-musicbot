@@ -89,6 +89,12 @@ services:
     # Security options for Chromium sandbox environments used by spotify clients if needed
     security_opt:
       - seccomp:unconfined
+    # Allows the container to reach services running on the host machine
+    # (e.g. a TeamSpeak server on the same PC) via host.docker.internal.
+    # On Windows/macOS Docker Desktop adds this automatically; this line
+    # makes it work on Linux Docker Engine as well.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   ts3_config:
