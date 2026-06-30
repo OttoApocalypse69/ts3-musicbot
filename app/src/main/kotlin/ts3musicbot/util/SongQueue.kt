@@ -343,50 +343,8 @@ class SongQueue(
         synchronized(playbackLock) {
             synchronized(songQueue) {
                 if (songQueue.isNotEmpty()) {
-                    var firstTrack = songQueue.first()
-                    when (firstTrack.link.serviceType()) {
-                        ServiceType.YOUTUBE, ServiceType.SOUNDCLOUD, ServiceType.BANDCAMP -> {
-                            // check if youtube-dl is able to download the track
-                            var attempts = 0
-                            while (songQueue.isNotEmpty() &&
-                                CommandRunner()
-                                    .runCommand(
-                                        "youtube-dl --extract-audio --audio-format best --audio-quality 0 " +
-                                            "--cookies youtube-dl.cookies --force-ipv4 --age-limit 21 " +
-                                            "--geo-bypass -s \"${firstTrack.link}\"; echo $?",
-                                        printOutput = false,
-                                        printErrors = false,
-                                    ).outputText
-                                    .lines()
-                                    .last() != "0"
-                            ) {
-                                if (attempts < 5) {
-                                    println("Error downloading track! Trying again...")
-                                    attempts++
-                                } else {
-                                    println(
-                                        "youtube-dl cannot download this track! Skipping...\n" +
-                                            "Check if a newer version of youtube-dl is available and update it " +
-                                            "to the latest one if you already haven't.",
-                                    )
-                                    songQueue.removeFirst()
-                                    if (songQueue.isNotEmpty()) {
-                                        firstTrack = songQueue.first()
-                                    } else {
-                                        break
-                                    }
-                                }
-                            }
-                            if (songQueue.isNotEmpty()) {
-                                playTrack(firstTrack)
-                            } else {
-                                println("Song queue is empty!")
-                                stopQueue()
-                            }
-                        }
-
-                        else -> playTrack(firstTrack)
-                    }
+                    val firstTrack = songQueue.first()
+                    playTrack(firstTrack)
                 } else {
                     println("Song queue is empty!")
                     stopQueue()
@@ -403,10 +361,14 @@ class SongQueue(
         println("Track ended.")
         val state = getState()
         if (state == State.QUEUE_PLAYING || state == State.QUEUE_PAUSED) {
-            when (getLoopMode()) {
-                LoopMode.TRACK -> synchronized(songQueue) { songQueue.add(0, track) }
-                LoopMode.QUEUE -> synchronized(songQueue) { songQueue.add(track) }
-                LoopMode.OFF -> {}
+            synchronized(songQueue) {
+                when (getLoopMode()) {
+                    // Re-add track to the front so it plays again next
+                    LoopMode.TRACK -> songQueue.add(0, track)
+                    // Re-add track to the back so the whole queue cycles
+                    LoopMode.QUEUE -> songQueue.add(track)
+                    LoopMode.OFF -> {}
+                }
             }
         }
 

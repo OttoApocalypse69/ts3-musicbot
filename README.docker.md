@@ -48,7 +48,6 @@ TS3_VOLUME_UP_COMMAND=volumeup
 TS3_VOLUME_UP_SHORT_COMMAND=volup
 TS3_VOLUME_DOWN_COMMAND=volumedown
 TS3_VOLUME_DOWN_SHORT_COMMAND=voldown
-TS3_VOLUME_MUTE_COMMAND=mute
 ```
 
 Important: keep the host and port separate. Do not put `:53645` in `TS3_SERVER_ADDRESS`; put it in `TS3_SERVER_PORT`.
@@ -132,7 +131,6 @@ TS3_VOLUME_UP_COMMAND=volumeup
 TS3_VOLUME_UP_SHORT_COMMAND=volup
 TS3_VOLUME_DOWN_COMMAND=volumedown
 TS3_VOLUME_DOWN_SHORT_COMMAND=voldown
-TS3_VOLUME_MUTE_COMMAND=mute
 ```
 
 Build and start the bot:
@@ -192,7 +190,7 @@ Quick start:
 !help
 ```
 
-`!play` searches YouTube first and can also play direct YouTube, SoundCloud, or Bandcamp links. Spotify is skipped when `TS3_SPOTIFY_PLAYER=disabled`. When a result is found, the bot posts the matched track name/link, adds it to the queue, and starts the queue only if nothing is already playing.
+`!play` searches YouTube first, then SoundCloud and Bandcamp. Spotify is skipped when `TS3_SPOTIFY_PLAYER=disabled`. When a result is found, the bot posts the matched track name and link. If nothing is currently playing, it starts the queue immediately. If a song is already playing, the new song is added to the end of the queue instead — so you can queue up songs one after another just by using `!play`.
 
 `!stop` stops the queue and also kills any leftover `mpv` playback process. `!skip` skips the currently playing song instantly.
 
@@ -223,7 +221,7 @@ What each permission means:
 
 | Permission | Blank default | When configured |
 | --- | --- | --- |
-| Music permission | Everyone can use `!play`, `!queue-add`, `!queue-playnext`, `!queue-playnow`, and `!replay`. | Only matching nicknames/groups can add music. |
+| Music permission | Everyone can use `!play` and `!replay`. | Only matching nicknames/groups can add music. |
 | Admin/control permission | Everyone can use normal control commands. | Only matching admins/owners can use restricted control commands. |
 | Track requester | The user who added the current track. | The requester can `!skip` their own track instantly. |
 
@@ -300,10 +298,6 @@ Examples:
 
 | Command | What it does |
 | --- | --- |
-| `!queue-add <link or service search>` | Adds tracks to the end of the queue. |
-| `!queue-playnext <link or service search>` | Adds tracks to the top of the queue. |
-| `!queue-playnow <link or service search>` | Adds tracks to the top and starts playback now. |
-| `!queue-play` | Starts playing the queue. |
 | `!queue` | Lists the queue. This is aliased from `queue-list` in Docker. |
 | `!queue-delete <position or link>` | Removes tracks from the queue. |
 | `!clear` | Clears the queue. This is aliased from `queue-clear` in Docker. |
@@ -321,8 +315,7 @@ Examples:
 | `!queue-repeat` | Adds the current song back to the top of the queue. |
 | `!loop` | Toggles current-track loop. The same song restarts when it ends. |
 | `!loop on` / `!loop off` | Explicitly turns current-track loop on/off. |
-| `!loopqueue` | Toggles whole-queue loop. Finished songs go to the end of the queue. |
-| `!loopqueue on` / `!loopqueue off` | Explicitly turns whole-queue loop on/off. |
+| `!loopqueue` | Toggles whole-queue loop. All songs repeat, including newly added ones, until `!loopoff` is used. |
 | `!loopoff` | Turns all loop modes off. |
 | `!loopstatus` | Shows the current loop mode. |
 | `!volume` / `!vol` | Shows the current live player volume. |
@@ -331,14 +324,10 @@ Examples:
 | `!volume +10` / `!volume -10` | Raises or lowers volume by a custom amount. |
 | `!volumeup` / `!volup` | Raises volume by 10, or by a given amount. |
 | `!volumedown` / `!voldown` | Lowers volume by 10, or by a given amount. |
-| `!mute` | Sets live player volume to 0. |
 
 Examples:
 
 ```text
-!queue-add youtube video haken initiate
-!queue-playnext https://soundcloud.com/artist/track
-!queue-playnow bandcamp track celeste soundtrack
 !queue --limit 20
 !queue-delete 3
 !queue-move 5 -p 0
@@ -349,6 +338,7 @@ Examples:
 !volup 15
 !voldown
 ```
+
 
 ### Channel Commands
 
@@ -376,10 +366,6 @@ Available command environment variables:
 TS3_COMMAND_PREFIX=!
 TS3_HELP_COMMAND=help
 TS3_PLAY_COMMAND=play
-TS3_QUEUE_ADD_COMMAND=queue-add
-TS3_QUEUE_PLAYNEXT_COMMAND=queue-playnext
-TS3_QUEUE_PLAYNOW_COMMAND=queue-playnow
-TS3_QUEUE_PLAY_COMMAND=queue-play
 TS3_QUEUE_LIST_COMMAND=queue
 TS3_QUEUE_DELETE_COMMAND=queue-delete
 TS3_QUEUE_CLEAR_COMMAND=clear
@@ -392,10 +378,6 @@ TS3_QUEUE_NOWPLAYING_COMMAND=nowplaying
 TS3_QUEUE_PAUSE_COMMAND=pause
 TS3_QUEUE_RESUME_COMMAND=resume
 TS3_QUEUE_REPEAT_COMMAND=queue-repeat
-TS3_HEALTH_COMMAND=health
-TS3_SEEK_COMMAND=seek
-TS3_HISTORY_COMMAND=history
-TS3_REPLAY_COMMAND=replay
 TS3_LOOP_COMMAND=loop
 TS3_LOOP_QUEUE_COMMAND=loopqueue
 TS3_LOOP_OFF_COMMAND=loopoff
@@ -406,7 +388,6 @@ TS3_VOLUME_UP_COMMAND=volumeup
 TS3_VOLUME_UP_SHORT_COMMAND=volup
 TS3_VOLUME_DOWN_COMMAND=volumedown
 TS3_VOLUME_DOWN_SHORT_COMMAND=voldown
-TS3_VOLUME_MUTE_COMMAND=mute
 TS3_INFO_COMMAND=info
 TS3_SEARCH_COMMAND=search
 TS3_GOTO_COMMAND=goto

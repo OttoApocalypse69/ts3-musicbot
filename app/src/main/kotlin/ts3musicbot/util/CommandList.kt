@@ -34,7 +34,6 @@ data class CommandList(
             Pair("volume-up-short", "!volup"),
             Pair("volumedown", "!volumedown"),
             Pair("volume-down-short", "!voldown"),
-            Pair("mute", "!mute"),
             Pair("loop", "!loop"),
             Pair("loopqueue", "!loopqueue"),
             Pair("loopoff", "!loopoff"),
@@ -53,25 +52,20 @@ data class CommandList(
                 "\n" +
                     "General commands:\n" +
                     "${commandList["help"]} <command>                              -Shows this help message. Use ${commandList["help"]} <command> to get more help on a specific command.\n" +
-                    "${commandList["play"]} <query/link>                           -Search for a song and start playing it immediately.\n" +
-                    "${commandList["queue-add"]}                                   -Add track(s) to queue by link or directly searching and adding the first match to the queue.\n" +
-                    "${commandList["queue-playnext"]}                              -Add track/playlist/album etc. to the top of the queue. Add multiple links separated by a comma \",\". Shuffle with the -s option\n" +
-                    "${commandList["queue-playnow"]}                               -Add track/playlist/album etc. to the top of the queue and start playing it immediately.\n" +
-                    "${commandList["queue-play"]}                                  -Play the song queue\n" +
+                    "${commandList["play"]} <query/link>                           -Search for a song and play it. If a song is already playing, adds it to the queue instead.\n" +
                     "${commandList["queue-list"]} <--all,--limit>                  -Lists current songs in queue. Add the -a/--all option to show all tracks or -l/--limit to set a limit to the amount of tracks.\n" +
-                    "${commandList["queue-delete"]} <link(s)/position(s)>          -Delete song(s) from the queue. If you want to delete multiple tracks, just separate them with a comma \",\". Optionally you can just use a position to delete a track.\n" +
+                    "${commandList["queue-delete"]} <link(s)/position(s)>          -Delete song(s) from the queue. Separate multiple tracks with a comma \",\". Optionally use a position number.\n" +
                     "${commandList["queue-clear"]}                                 -Clears the song queue\n" +
                     "${commandList["shuffle"]}                                     -Shuffles the queue\n" +
                     "${commandList["queue-skip"]}                                  -Skips the currently playing song instantly.\n" +
-                    "${commandList["queue-move"]} <link> -p <pos>                  -Moves a track to a desired position in the queue. <link> should be your song link and <pos> should be the new position of your song.\n" +
+                    "${commandList["queue-move"]} <link> -p <pos>                  -Moves a track to a desired position in the queue.\n" +
                     "${commandList["queue-stop"]}                                  -Stops the queue\n" +
                     "${commandList["queue-status"]}                                -Returns the status of the song queue\n" +
                     "${commandList["nowplaying"]}                                  -Returns information on the currently playing track\n" +
                     "${commandList["queue-pause"]}                                 -Pauses playback\n" +
                     "${commandList["queue-resume"]}                                -Resumes playback\n" +
-                    "${commandList["queue-repeat"]} <amount>                       -Adds the currently playing song to the top of the queue. <amount> is how many times the song should be queued.\n" +
                     "${commandList["loop"]}                                        -Toggles looping of the current track on/off\n" +
-                    "${commandList["loopqueue"]}                                   -Toggles looping of the entire queue on/off\n" +
+                    "${commandList["loopqueue"]}                                   -Loops the current track and the entire queue. New songs added also get looped until ${commandList["loopoff"]} is used.\n" +
                     "${commandList["loopoff"]}                                     -Turns off all looping\n" +
                     "${commandList["loopstatus"]}                                  -Shows current loop mode\n" +
                     "${commandList["search"]} <service> <type> <text> <limit>      -Search on music services. Shows 10 first results by default. <type> can be track, video, playlist or channel. You can set the amount of results with the -l/--limit flag.\n" +
@@ -79,7 +73,6 @@ data class CommandList(
                     "${commandList["volume"]} <0-150>                              -Get or set playback volume (0-150%).\n" +
                     "${commandList["volumeup"]}                                    -Increase volume by 10%\n" +
                     "${commandList["volumedown"]}                                  -Decrease volume by 10%\n" +
-                    "${commandList["mute"]}                                        -Mute/unmute playback\n" +
                     "${commandList["goto"]} <channelpath> -p <channelpassword>     -Move the bot to a different channel.\n" +
                     "${commandList["return"]}                                      -Return the bot back to the original channel.\n",
             ),
@@ -158,10 +151,14 @@ data class CommandList(
                 "play",
                 "\n" +
                     "Showing help for ${commandList["play"]} command:\n" +
-                    "${commandList["play"]} searches online music services and starts playback immediately.\n" +
+                    "${commandList["play"]} searches online music services and plays the result.\n" +
+                    "If nothing is currently playing, it starts playback immediately.\n" +
+                    "If a song is already playing, the new song is added to the end of the queue instead.\n" +
                     "You can also pass a direct music link.\n" +
                     "Example - Search and play a song:\n" +
                     "${commandList["play"]} never gonna give you up\n" +
+                    "Example - Add a song to the queue while another is playing:\n" +
+                    "${commandList["play"]} another song\n" +
                     "Example - Play a direct link:\n" +
                     "${commandList["play"]} https://bandcamp.com/track/example",
             ),
@@ -299,8 +296,10 @@ data class CommandList(
                 "loopqueue",
                 "\n" +
                     "Showing help for ${commandList["loopqueue"]} command:\n" +
-                    "${commandList["loopqueue"]} toggles looping of the entire queue.\n" +
-                    "When enabled, songs are re-added to the end of the queue after playing.",
+                    "${commandList["loopqueue"]} toggles looping of the current track and the entire queue.\n" +
+                    "When enabled, each song is re-added to the end of the queue after it finishes playing,\n" +
+                    "so the queue repeats indefinitely. Any new songs added with ${commandList["play"]} are also looped.\n" +
+                    "Use ${commandList["loopoff"]} to stop looping.",
             ),
             Pair(
                 "loopoff",
@@ -341,12 +340,7 @@ data class CommandList(
                     "${commandList["volumedown"]} decreases the volume by 10%.\n" +
                     "Alias: ${commandList["volume-down-short"]}",
             ),
-            Pair(
-                "mute",
-                "\n" +
-                    "Showing help for ${commandList["mute"]} command:\n" +
-                    "${commandList["mute"]} toggles mute. If volume is above 0, it mutes. If already muted, it unmutes to 50%.",
-            ),
+
             Pair(
                 "info",
                 "\n" +

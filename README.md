@@ -14,22 +14,45 @@ TS3 MusicBot doesn't require you to be an admin on the server you are using the 
 - Supports adding multiple tracks, albums and playlists etc. to the queue simultaneously.<br>
 - Add whole playlists to the queue. This is something that isn't possible even in the official Spotify client!<br>
 - Supports adding a Spotify artist's top tracks to the queue.<br>
-- You can easily add content to the start, or the end of the song queue, or at any position you want!<br>
-- Supports pre-shuffling. This makes it possible for example, to shuffle a playlist before it gets added to the queue. This is very useful if you don't want to shuffle the whole song queue!<br>
+- Queue-aware `!play` command — if a song is already playing, `!play` adds the new song to the end of the queue automatically!<br>
+- Shuffle your queue at any time with `!shuffle`.<br>
+- Loop the current track with `!loop`, or loop the entire queue (including newly added songs) with `!loopqueue`.<br>
+- You can easily move tracks to any position in the queue.<br>
+- Supports pre-shuffling. This makes it possible, for example, to shuffle a playlist before it gets added to the queue.<br>
 - Supports ncspot! If you don't want to use the official Spotify client, you can use ncspot, which is a lot lighter on system resources, but it requires a Spotify premium account.<br>
 - And more...
 <br>
 <h4>Requirements & Setup options:</h4>
 
 - **Docker (Recommended - All Platforms):** Works out of the box on Windows, Linux, and macOS via containerized virtualization. On Windows, run `.\setup.ps1` to be prompted for the bot nickname, TeamSpeak server address, server password, and channel. Refer to the [Docker Setup & Tutorial Guide](README.docker.md) for quick-start commands.
-- **Manual Installation (Linux/WSL2):** Requires manual PulseAudio virtual routing, tmux, xvfb, and JavaFX setup. Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for manual instructions.
+- **Manual Installation (Linux/WSL2):** Requires manual PulseAudio virtual routing, tmux, xvfb, and JavaFX setup. Go to [Wiki](https://gitlab.com/Bettehem/ts3-musicbot/wikis/home) for manual instructions.<br>
 <br>
 <h4>Commands:</h4>
 
-- All commands start with the "!" character by default. You have to enter these in the chat of the channel your bot is connected to.<br>
-- Use `!play <song name or link>` for simple playback without Spotify Premium or API keys. It tries YouTube first, then SoundCloud and Bandcamp, for example `!play never gonna give you up`.<br>
-- Check Command List wiki page for a list of commands: https://gitlab.com/Bettehem/ts3-musicbot/wikis/command-list<br>
-
+- All commands start with the `!` character by default. Enter them in the chat of the channel your bot is connected to.<br>
+- **`!play <song name or link>`** — Search and play a song immediately. If a song is already playing, the new song is added to the end of the queue instead. Searches YouTube first, then SoundCloud and Bandcamp. Example: `!play never gonna give you up`.<br>
+- **`!queue-list`** / **`!queue`** — Show the current song queue.<br>
+- **`!skip`** — Skip the currently playing song.<br>
+- **`!stop`** — Stop the queue.<br>
+- **`!pause`** / **`!resume`** — Pause or resume playback.<br>
+- **`!shuffle`** — Shuffle the current queue.<br>
+- **`!loop`** — Toggle looping of the current track.<br>
+- **`!loopqueue`** — Toggle looping of the entire queue. All songs, including newly added ones, will repeat until `!loopoff` is used.<br>
+- **`!loopoff`** — Turn off all looping.<br>
+- **`!loopstatus`** — Show the current loop mode.<br>
+- **`!volume <0-150>`** / **`!vol`** — Get or set the playback volume.<br>
+- **`!volumeup`** / **`!volup`** — Increase volume by 10%.<br>
+- **`!volumedown`** / **`!voldown`** — Decrease volume by 10%.<br>
+- **`!nowplaying`** — Show info on the currently playing track.<br>
+- **`!queue-status`** — Show the current queue status (playing/paused/stopped).<br>
+- **`!queue-clear`** — Clear the song queue.<br>
+- **`!queue-delete <link or position>`** — Delete a specific song from the queue.<br>
+- **`!queue-move <link or position> -p <new position>`** — Move a track to a new position in the queue.<br>
+- **`!search <service> <type> <query>`** — Search a music service. Example: `!search bc track Haken Initiate`.<br>
+- **`!info <link or search query>`** — Get info on a song, album, or artist.<br>
+- **`!goto <channel path>`** — Move the bot to another channel.<br>
+- **`!return`** — Return the bot to its original channel.<br>
+- **`!help`** / **`!help <command>`** — Show help for all or a specific command.<br>
 <br>
 <br>
 <br>

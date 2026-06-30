@@ -290,6 +290,9 @@ class ChatReader(
                             return Pair(false, input)
                         }
 
+                        // Determine if we should queue instead of play immediately
+                        val queueIsActive = songQueue.getState() != SongQueue.State.QUEUE_STOPPED
+
                         var isDirectLink = input.contains("^https?://\\S+$".toRegex())
                         var serviceType = if (isDirectLink) inputLink.serviceType() else ServiceType.YOUTUBE
                         var playTarget = if (isDirectLink) input else "ytdl://ytsearch1:$input"
@@ -309,7 +312,7 @@ class ChatReader(
                                 if (isDirectLink) {
                                     "Opening link..."
                                 } else {
-                                    "Searching YouTube for: $input"
+                                    "Searching for: $input"
                                 },
                             ),
                         )
@@ -404,19 +407,32 @@ class ChatReader(
                             return Pair(false, input)
                         }
 
-                        songQueue.stopQueue()
-                        commandRunner.runCommand("pkill mpv", ignoreOutput = true)
-                        songQueue.clearQueue()
                         val track = Track(
                             title = Name(if (title.isNotEmpty()) title else if (isDirectLink) "Direct Link" else input),
                             link = Link(resolvedLink.ifEmpty { playTarget }),
                             playability = Playability(isPlayable = true)
                         )
-                        songQueue.addToQueue(track)
-                        songQueue.startQueue()
-                        commandListener.onCommandExecuted(playCommandString, "Started playback.", playTarget)
-                        commandJob.complete()
-                        return Pair(true, playTarget)
+
+                        if (queueIsActive) {
+                            // Queue is already running — add the new track to the end
+                            songQueue.addToQueue(track)
+                            val displayTitle = if (title.isNotEmpty()) title else input
+                            val addedMsg = "Added to queue: $displayTitle"
+                            printToChat(listOf(addedMsg))
+                            commandListener.onCommandExecuted(playCommandString, addedMsg, playTarget)
+                            commandJob.complete()
+                            return Pair(true, playTarget)
+                        } else {
+                            // Queue is stopped — start fresh
+                            songQueue.stopQueue()
+                            commandRunner.runCommand("pkill mpv", ignoreOutput = true)
+                            songQueue.clearQueue()
+                            songQueue.addToQueue(track)
+                            songQueue.startQueue()
+                            commandListener.onCommandExecuted(playCommandString, "Started playback.", playTarget)
+                            commandJob.complete()
+                            return Pair(true, playTarget)
+                        }
                     }
 
                     // parse and execute commands
@@ -2083,9 +2099,9 @@ class ChatReader(
                             commandString.contains("^${cmdList.commandList["loopqueue"]}$".toRegex()) -> {
                                 val mode = songQueue.toggleQueueLoop()
                                 val msg = if (mode == SongQueue.LoopMode.QUEUE) {
-                                    "Looping the entire queue is now enabled."
+                                    "Queue loop enabled. The current track and entire queue will repeat. New songs added with ${cmdList.commandList["play"]} will also be looped. Use ${cmdList.commandList["loopoff"]} to stop."
                                 } else {
-                                    "Looping is now disabled."
+                                    "Queue loop disabled."
                                 }
                                 printToChat(listOf(msg))
                                 commandJob.complete()
@@ -2359,20 +2375,6 @@ class ChatReader(
                                 setPulseAudioVolume(newVol)
                                 playerctl("mpv", "volume", (newVol / 100.0).toString())
                                 printToChat(listOf("Volume decreased to $newVol%"))
-                                commandJob.complete()
-                                return Pair(true, newVol)
-                            }
-                            // mute command
-                            commandString.contains("^${cmdList.commandList["mute"]}$".toRegex()) -> {
-                                val currentVol = botSettings.ytVolume
-                                val newVol = if (currentVol > 0) 0 else 50
-                                botSettings.ytVolume = newVol
-                                botSettings.scVolume = newVol
-                                botSettings.bcVolume = newVol
-                                setPulseAudioVolume(newVol)
-                                playerctl("mpv", "volume", (newVol / 100.0).toString())
-                                val msg = if (newVol == 0) "Muted playback." else "Unmuted playback. Volume set to 50%."
-                                printToChat(listOf(msg))
                                 commandJob.complete()
                                 return Pair(true, newVol)
                             }
